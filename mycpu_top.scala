@@ -1,26 +1,28 @@
-package mycpu_top
+package my_old_cpu
 
 import chisel3._
 import chisel3.util._
+import common._
+import common.const._
 
 class MYCPU_TOP extends Module {
     val io = IO(new Bundle {
         val resetn            = Input(Bool())
         // inst sram interface
         val inst_sram_we      = Output(Bool())
-        val inst_sram_addr    = Output(UInt(32.W))
-        val inst_sram_wdata   = Output(UInt(32.W))
-        val inst_sram_rdata   = Input(UInt(32.W))
+        val inst_sram_addr    = Output(UInt(WORD.W))
+        val inst_sram_wdata   = Output(UInt(WORD.W))
+        val inst_sram_rdata   = Input(UInt(WORD.W))
         // data sram interface
         val data_sram_we      = Output(Bool())
-        val data_sram_addr    = Output(UInt(32.W))
-        val data_sram_wdata   = Output(UInt(32.W))
-        val data_sram_rdata   = Input(UInt(32.W))
+        val data_sram_addr    = Output(UInt(WORD.W))
+        val data_sram_wdata   = Output(UInt(WORD.W))
+        val data_sram_rdata   = Input(UInt(WORD.W))
         // trace debug interface
-        val debug_wb_pc       = Output(UInt(32.W))
+        val debug_wb_pc       = Output(UInt(WORD.W))
         val debug_wb_rf_we    = Output(UInt(4.W))
-        val debug_wb_rf_wnum  = Output(UInt(5.W))
-        val debug_wb_rf_wdata = Output(UInt(32.W))
+        val debug_wb_rf_wnum  = Output(UInt(REG.W))
+        val debug_wb_rf_wdata = Output(UInt(WORD.W))
     })
 
     val my_reset = RegNext(~io.resetn, init = false.B)
@@ -32,12 +34,12 @@ class MYCPU_TOP extends Module {
         valid := true.B
     }
 
-    val seq_pc    = Wire(UInt(32.W))
-    val nextpc    = Wire(UInt(32.W))
+    val seq_pc    = Wire(UInt(WORD.W))
+    val nextpc    = Wire(UInt(WORD.W))
     val br_taken  = Wire(Bool())
-    val br_target = Wire(UInt(32.W))
-    val inst      = Wire(UInt(32.W))
-    val pc        = RegInit(0x1bfffffcL.U(32.W))
+    val br_target = Wire(UInt(WORD.W))
+    val inst      = Wire(UInt(WORD.W))
+    val pc        = RegInit(0x1bfffffcL.U(WORD.W))
 
     val alu_op        = WireInit(0.U(12.W))
 //  val load_op       = Wire(Bool())
@@ -48,20 +50,20 @@ class MYCPU_TOP extends Module {
     val gr_we         = Wire(Bool())
     val mem_we        = Wire(Bool())
     val src_reg_is_rd = Wire(Bool())
-    val dest          = Wire(UInt(5.W))
-    val rj_value      = Wire(UInt(32.W))
-    val rkd_value     = Wire(UInt(32.W))
-    val imm           = Wire(UInt(32.W))
-    val br_offs       = Wire(UInt(32.W))
-    val jirl_offs     = Wire(UInt(32.W))
+    val dest          = Wire(UInt(REG.W))
+    val rj_value      = Wire(UInt(WORD.W))
+    val rkd_value     = Wire(UInt(WORD.W))
+    val imm           = Wire(UInt(WORD.W))
+    val br_offs       = Wire(UInt(WORD.W))
+    val jirl_offs     = Wire(UInt(WORD.W))
 
     val op_31_26 = Wire(UInt(6.W))
     val op_25_22 = Wire(UInt(4.W))
     val op_21_20 = Wire(UInt(2.W))
     val op_19_15 = Wire(UInt(5.W))
-    val rd       = Wire(UInt(5.W))
-    val rj       = Wire(UInt(5.W))
-    val rk       = Wire(UInt(5.W))
+    val rd       = Wire(UInt(REG.W))
+    val rj       = Wire(UInt(REG.W))
+    val rk       = Wire(UInt(REG.W))
     val i12      = Wire(UInt(12.W))
     val i20      = Wire(UInt(20.W))
     val i16      = Wire(UInt(16.W))
@@ -70,7 +72,7 @@ class MYCPU_TOP extends Module {
     val op_31_26_d = Wire(UInt(64.W))
     val op_25_22_d = Wire(UInt(16.W))
     val op_21_20_d = Wire(UInt( 4.W))
-    val op_19_15_d = Wire(UInt(32.W))
+    val op_19_15_d = Wire(UInt(WORD.W))
 
     val inst_add_w   = Wire(Bool())
     val inst_sub_w   = Wire(Bool())
@@ -100,19 +102,19 @@ class MYCPU_TOP extends Module {
     val need_si26 = Wire(Bool())
     val src2_is_4 = Wire(Bool())
 
-    val rf_raddr1 = Wire(UInt(5.W))
-    val rf_rdata1 = Wire(UInt(32.W))
-    val rf_raddr2 = Wire(UInt(5.W))
-    val rf_rdata2 = Wire(UInt(32.W))
+    val rf_raddr1 = Wire(UInt(REG.W))
+    val rf_rdata1 = Wire(UInt(WORD.W))
+    val rf_raddr2 = Wire(UInt(REG.W))
+    val rf_rdata2 = Wire(UInt(WORD.W))
     val rf_we     = Wire(Bool())
-    val rf_waddr  = Wire(UInt(5.W))
-    val rf_wdata  = Wire(UInt(32.W))
+    val rf_waddr  = Wire(UInt(REG.W))
+    val rf_wdata  = Wire(UInt(WORD.W))
 
-    val alu_src1   = Wire(UInt(32.W))
-    val alu_src2   = Wire(UInt(32.W))
-    val alu_result = Wire(UInt(32.W))
+    val alu_src1   = Wire(UInt(WORD.W))
+    val alu_src2   = Wire(UInt(WORD.W))
+    val alu_result = Wire(UInt(WORD.W))
 
-    val mem_result = Wire(UInt(32.W))
+    val mem_result = Wire(UInt(WORD.W))
 
     seq_pc := pc + 4.U
     nextpc := Mux(br_taken, br_target, seq_pc)
@@ -126,7 +128,7 @@ class MYCPU_TOP extends Module {
 
     io.inst_sram_we := false.B
     io.inst_sram_addr  := pc
-    io.inst_sram_wdata := 0.U(32.W)
+    io.inst_sram_wdata := 0.U(WORD.W)
     inst            := io.inst_sram_rdata
 
     op_31_26 := inst(31, 26)
@@ -201,7 +203,7 @@ class MYCPU_TOP extends Module {
     need_si26 := inst_b | inst_bl
     src2_is_4 := inst_jirl | inst_bl
 
-    imm := Mux(src2_is_4, 4.U(32.W), 
+    imm := Mux(src2_is_4, 4.U(WORD.W), 
            Mux(need_si20, Cat(i20(19, 0), 0.U(12.W)), 
            Mux(need_si12, Cat(Fill(20, i12(11)), i12(11, 0)), 
                           Cat(0.U(27.W), inst(14, 10)))))
@@ -223,7 +225,7 @@ class MYCPU_TOP extends Module {
     dst_is_r1     := inst_bl
     gr_we         := ~inst_st_w & ~inst_beq & ~inst_bne & ~inst_b
     mem_we        := inst_st_w
-    dest          := Mux(dst_is_r1, 1.U(5.W), rd)
+    dest          := Mux(dst_is_r1, 1.U(REG.W), rd)
 
     rf_raddr1 := rj
     rf_raddr2 := Mux(src_reg_is_rd, rd, rk)
@@ -263,7 +265,7 @@ class MYCPU_TOP extends Module {
     io.data_sram_addr  := alu_result
     io.data_sram_wdata := rkd_value
 
-    val final_result = Wire(UInt(32.W))
+    val final_result = Wire(UInt(WORD.W))
     mem_result   := io.data_sram_rdata
     final_result := Mux(res_from_mem, mem_result, alu_result)
 

@@ -1,7 +1,9 @@
-package mycpu_top
+package mycpu
 
 import chisel3._
 import chisel3.util._
+import common._
+import common.const._
 
 // 参数化的解码器模块
 class Decoder[S <: Data, T <: Data](inWidth: Int, outWidth: Int) extends Module {
