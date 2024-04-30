@@ -23,7 +23,7 @@ class MYCPU_TOP extends Module {
     IFU.io.ds_allowin <> IDU.io.ds_allowin
 
     IDU.io.es_allowin <> EXE.io.es_allowin
-    IDU.io.to_ex <> EXE.io.to_ex
+    IDU.io.to_es <> EXE.io.to_es
     IDU.io.rj <> regfile.io.raddr1
     IDU.io.rk <> regfile.io.raddr2
     IDU.io.rd <> regfile.io.raddr3
@@ -32,10 +32,10 @@ class MYCPU_TOP extends Module {
     IDU.io.reg_rdata3 <> regfile.io.rdata3
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
-    EXE.io.to_me     <> MEM.io.to_me
+    EXE.io.to_ms     <> MEM.io.to_ms
 
     MEM.io.ws_allowin <> WBU.io.ws_allowin
-    MEM.io.to_wb      <> WBU.io.to_wb
+    MEM.io.to_ws      <> WBU.io.to_ws
     MEM.io.data       <> io.data
 
     WBU.io.debug      <> io.debug

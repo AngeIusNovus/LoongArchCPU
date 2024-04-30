@@ -33,5 +33,5 @@ class RegFile extends Module {
   // 读端口2
   // 如果读地址是0，则直接输出0，否则从寄存器文件读取数据
   io.rdata2 := Mux(io.raddr2 === 0.U, 0.U(WORD.W), rf.read(io.raddr2))
-  io.rdata3 := Mux(io.raddr3 === 0.U, 0.U(WORD.W), rf.read(io.raddr2))
+  io.rdata3 := Mux(io.raddr3 === 0.U, 0.U(WORD.W), rf.read(io.raddr3))
 }

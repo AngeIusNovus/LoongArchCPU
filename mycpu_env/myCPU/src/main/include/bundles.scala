@@ -36,7 +36,7 @@ class EX_BUS extends Bundle {
     val alu_op      = Output(UInt(12.W))
     val src1_data   = Output(UInt(WORD.W))
     val src2_data   = Output(UInt(WORD.W))
-    val wb_sel      = Output(UInt(WB_SEL_LEN.W))
+    val wb_src      = Output(UInt(WB_SEL_LEN.W))
     val rf_we       = Output(Bool())
     val mem_we      = Output(Bool())
     val dest        = Output(UInt(REG.W))
@@ -46,7 +46,7 @@ class EX_BUS extends Bundle {
 
 class ME_BUS extends Bundle {
     val valid = Output(Bool())
-    val wb_sel = Output(UInt(WB_SEL_LEN.W))
+    val wb_src = Output(UInt(WB_SEL_LEN.W))
     val rf_we = Output(Bool())
     val mem_we = Output(Bool())
     val dest = Output(UInt(REG.W))
@@ -57,7 +57,7 @@ class ME_BUS extends Bundle {
 
 class WB_BUS extends Bundle {
     val valid = Output(Bool())
-    val wb_sel = Output(UInt(WB_SEL_LEN.W))
+    val wb_src = Output(UInt(WB_SEL_LEN.W))
     val rf_we = Output(Bool())
     val dest = Output(UInt(REG.W))
     val alu_res = Output(UInt(WORD.W))

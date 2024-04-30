@@ -20,10 +20,11 @@ class IF_Stage extends Module {
 
     to_fs_valid := RegNext(!reset.asBool) & (!reset.asBool)
     fs_ready_go := true.B
-    fs_allowin := !fs_valid | (fs_ready_go & io.ds_allowin)
+    fs_allowin  := (!fs_valid) | (fs_ready_go & io.ds_allowin)
     when (fs_allowin) {
         fs_valid := to_fs_valid
     }
+    io.to_ds.valid := fs_valid & fs_ready_go
 
     val pc     = RegInit("h1bfffffc".asUInt(32.W))
     val seq_pc = Wire(UInt(32.W))
@@ -32,12 +33,11 @@ class IF_Stage extends Module {
     seq_pc := pc + 4.U
     nxt_pc := Mux(io.br.taken, io.br.target, seq_pc)
 
-    io.inst.we   := 0.U(4.W)
-    io.inst.en   := to_fs_valid & fs_allowin
-    io.inst.addr := nxt_pc
+    io.inst.we    := 0.U(4.W)
+    io.inst.en    := to_fs_valid & fs_allowin
+    io.inst.addr  := nxt_pc
     io.inst.wdata := 0.U(WORD.W)
 
-    io.to_ds.valid := fs_valid & fs_ready_go
     io.to_ds.pc    := pc
     io.to_ds.inst  := io.inst.rdata
 

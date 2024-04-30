@@ -8,14 +8,11 @@ object const {
     val REG  = 5
 
     val OP_LEN = 4
-
+    val ALU_X = 15.U(OP_LEN.W)
     val ALU_ADD = 0.U(OP_LEN.W)
-    val ALU_SUB = 1.U(OP_LEN.W)
     val ALU_LD = 0.U(OP_LEN.W)
     val ALU_ST = 0.U(OP_LEN.W)
-    val ALU_JIRL = 0.U(OP_LEN.W)
-    val ALU_B = 0.U(OP_LEN.W)
-    val ALU_BL = 0.U(OP_LEN.W)
+    val ALU_SUB = 1.U(OP_LEN.W)
     val ALU_SLT = 2.U(OP_LEN.W)
     val ALU_SLTU = 3.U(OP_LEN.W)
     val ALU_AND = 4.U(OP_LEN.W)
@@ -26,8 +23,13 @@ object const {
     val ALU_SRL = 9.U(OP_LEN.W)
     val ALU_SRA = 10.U(OP_LEN.W)
     val ALU_LU12I = 11.U(OP_LEN.W)
-    val ALU_BEQ = 0.U(OP_LEN.W)
-    val ALU_BNE = 0.U(OP_LEN.W)
+
+    val BR_LEN = 3
+    val BR_X = 0.U(BR_LEN.W)
+    val BR_S = 1.U(BR_LEN.W)
+    val BR_BNE = 2.U(BR_LEN.W)
+    val BR_BEQ = 3.U(BR_LEN.W)
+    val BR_BL = 4.U(BR_LEN.W)
 
     val MEM_SEL_LEN = 4
     val MEM_X = 0.U(MEM_SEL_LEN.W)
