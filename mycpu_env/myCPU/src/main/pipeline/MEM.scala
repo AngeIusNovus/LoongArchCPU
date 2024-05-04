@@ -12,6 +12,7 @@ class MEM_Stage extends Module {
         val ms_allowin = Output(Bool())
         val ws_allowin = Input(Bool())
         val data = new RAM_IO()
+        val rd_ms = Output(UInt(REG.W))
     })
 
     val ms_valid = RegInit(false.B)
@@ -25,9 +26,10 @@ class MEM_Stage extends Module {
     io.to_ws.valid := ms_valid & ms_ready_go
 
     val alu_res     = RegInit(0.U(WORD.W))
+    val mem_en      = RegInit(false.B)
+    val mem_we      = RegInit(0.U(MEM_SEL_LEN.W))
+    val rf_we       = RegInit(0.U(RF_SEL_LEN.W))
     val wb_src      = RegInit(0.U(WB_SEL_LEN.W))
-    val mem_we      = RegInit(false.B)
-    val rf_we       = RegInit(false.B)
     val dest        = RegInit(0.U(REG.W))
     val rd_value    = RegInit(0.U(WORD.W))
     val pc          = RegInit(0.U(WORD.W))
@@ -36,14 +38,15 @@ class MEM_Stage extends Module {
         alu_res := io.to_ms.alu_res
         wb_src := io.to_ms.wb_src
         rf_we := io.to_ms.rf_we
+        mem_en := io.to_ms.mem_en
         mem_we := io.to_ms.mem_we
         dest := io.to_ms.dest
-        rd_value := io.to_ms.rd_value     
+        rd_value := io.to_ms.rd_value
         pc := io.to_ms.pc 
     }
 
-    io.data.en := true.B
-    io.data.we := Fill(4, mem_we)
+    io.data.en := mem_en
+    io.data.we := mem_we
     io.data.addr := alu_res
     io.data.wdata := rd_value
 
@@ -52,4 +55,6 @@ class MEM_Stage extends Module {
     io.to_ws.dest := dest
     io.to_ws.alu_res := alu_res
     io.to_ws.pc := pc
+
+    io.rd_ms := Mux(ms_valid, dest, 0.U(REG.W))
 }

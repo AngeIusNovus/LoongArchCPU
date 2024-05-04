@@ -30,9 +30,12 @@ class MYCPU_TOP extends Module {
     IDU.io.reg_rdata1 <> regfile.io.rdata1
     IDU.io.reg_rdata2 <> regfile.io.rdata2
     IDU.io.reg_rdata3 <> regfile.io.rdata3
+    IDU.io.rd_es <> EXE.io.rd_es
+    IDU.io.rd_ms <> MEM.io.rd_ms
+    IDU.io.rd_ws <> WBU.io.rd_ws
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
-    EXE.io.to_ms     <> MEM.io.to_ms
+    EXE.io.to_ms      <> MEM.io.to_ms
 
     MEM.io.ws_allowin <> WBU.io.ws_allowin
     MEM.io.to_ws      <> WBU.io.to_ws

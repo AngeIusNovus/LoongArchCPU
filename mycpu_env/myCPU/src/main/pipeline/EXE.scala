@@ -11,6 +11,7 @@ class EXE_Stage extends Module {
         val to_ms = new ME_BUS()
         val es_allowin = Output(Bool())
         val ms_allowin = Input(Bool())
+        val rd_es = Output(UInt(REG.W))
     })
 
     val es_valid = RegInit(false.B)
@@ -27,8 +28,9 @@ class EXE_Stage extends Module {
     val alu_op      = RegInit(0.U(OP_LEN.W))
     val src1_data   = RegInit(0.U(WORD.W))
     val src2_data   = RegInit(0.U(WORD.W))
-    val mem_we      = RegInit(0.U(4.W))
-    val rf_we       = RegInit(0.U(4.W))
+    val mem_en      = RegInit(false.B)
+    val mem_we      = RegInit(0.U(MEM_SEL_LEN.W))
+    val rf_we       = RegInit(0.U(RF_SEL_LEN.W))
     val wb_src      = RegInit(0.U(WB_SEL_LEN.W))
     val pc          = RegInit(0.U(WORD.W))
     val rd_value    = RegInit(0.U(WORD.W))
@@ -38,6 +40,7 @@ class EXE_Stage extends Module {
         alu_op      := io.to_es.alu_op
         src1_data   := io.to_es.src1_data
         src2_data   := io.to_es.src2_data
+        mem_en      := io.to_es.mem_en
         mem_we      := io.to_es.mem_we
         rf_we       := io.to_es.rf_we
         wb_src      := io.to_es.wb_src
@@ -60,5 +63,8 @@ class EXE_Stage extends Module {
     io.to_ms.dest     := dest
     io.to_ms.alu_res  := alu_result
     io.to_ms.pc       := pc
+    io.to_ms.mem_en   := mem_en
     io.to_ms.mem_we   := mem_we
+
+    io.rd_es := Mux(es_valid, dest, 0.U(REG.W))
 }

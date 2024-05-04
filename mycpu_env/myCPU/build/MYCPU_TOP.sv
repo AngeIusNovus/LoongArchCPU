@@ -65,22 +65,26 @@ module IF_Stage(	// @[src/main/pipeline/IFU.scala:8:7]
   input  [31:0] io_br_target,	// @[src/main/pipeline/IFU.scala:9:16]
   output        io_to_ds_valid,	// @[src/main/pipeline/IFU.scala:9:16]
   output [31:0] io_to_ds_pc,	// @[src/main/pipeline/IFU.scala:9:16]
-                io_to_ds_inst	// @[src/main/pipeline/IFU.scala:9:16]
+                io_to_ds_inst,	// @[src/main/pipeline/IFU.scala:9:16]
+  input         io_ds_allowin	// @[src/main/pipeline/IFU.scala:9:16]
 );
 
   reg         fs_valid;	// @[src/main/pipeline/IFU.scala:18:27]
   reg         to_fs_valid_REG;	// @[src/main/pipeline/IFU.scala:21:27]
   wire        to_fs_valid = to_fs_valid_REG & ~reset;	// @[src/main/pipeline/IFU.scala:21:{27,43,46}]
+  wire        fs_allowin = ~fs_valid | io_ds_allowin;	// @[src/main/pipeline/IFU.scala:18:27, :23:{21,32}]
   reg  [31:0] pc;	// @[src/main/pipeline/IFU.scala:29:25]
   wire [31:0] _seq_pc_T = pc + 32'h4;	// @[src/main/pipeline/IFU.scala:29:25, :33:18]
+  wire        io_inst_en_0 = to_fs_valid & fs_allowin;	// @[src/main/pipeline/IFU.scala:21:43, :23:32, :37:34]
   always @(posedge clock) begin	// @[src/main/pipeline/IFU.scala:8:7]
     if (reset) begin	// @[src/main/pipeline/IFU.scala:8:7]
       fs_valid <= 1'h0;	// @[src/main/pipeline/IFU.scala:8:7, :18:27]
       pc <= 32'h1BFFFFFC;	// @[src/main/pipeline/IFU.scala:29:25]
     end
     else begin	// @[src/main/pipeline/IFU.scala:8:7]
-      fs_valid <= to_fs_valid;	// @[src/main/pipeline/IFU.scala:18:27, :21:43]
-      if (to_fs_valid) begin	// @[src/main/pipeline/IFU.scala:21:43]
+      if (fs_allowin)	// @[src/main/pipeline/IFU.scala:23:32]
+        fs_valid <= to_fs_valid;	// @[src/main/pipeline/IFU.scala:18:27, :21:43]
+      if (io_inst_en_0) begin	// @[src/main/pipeline/IFU.scala:37:34]
         if (io_br_taken)	// @[src/main/pipeline/IFU.scala:9:16]
           pc <= io_br_target;	// @[src/main/pipeline/IFU.scala:29:25]
         else	// @[src/main/pipeline/IFU.scala:9:16]
@@ -111,9 +115,9 @@ module IF_Stage(	// @[src/main/pipeline/IFU.scala:8:7]
       `FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/IFU.scala:8:7]
     `endif // FIRRTL_AFTER_INITIAL
   `endif // ENABLE_INITIAL_REG_
-  assign io_inst_en = to_fs_valid;	// @[src/main/pipeline/IFU.scala:8:7, :21:43]
+  assign io_inst_en = io_inst_en_0;	// @[src/main/pipeline/IFU.scala:8:7, :37:34]
   assign io_inst_addr = io_br_taken ? io_br_target : _seq_pc_T;	// @[src/main/pipeline/IFU.scala:8:7, :33:18, :34:18]
-  assign io_to_ds_valid = fs_valid;	// @[src/main/pipeline/IFU.scala:8:7, :18:27]
+  assign io_to_ds_valid = fs_valid & ~io_br_taken;	// @[src/main/pipeline/IFU.scala:8:7, :18:27, :27:{46,49}]
   assign io_to_ds_pc = pc;	// @[src/main/pipeline/IFU.scala:8:7, :29:25]
   assign io_to_ds_inst = io_inst_rdata;	// @[src/main/pipeline/IFU.scala:8:7]
 endmodule
@@ -129,49 +133,54 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
   output [31:0] io_to_es_src1_data,	// @[src/main/pipeline/IDU.scala:10:16]
                 io_to_es_src2_data,	// @[src/main/pipeline/IDU.scala:10:16]
   output [1:0]  io_to_es_wb_src,	// @[src/main/pipeline/IDU.scala:10:16]
-  output        io_to_es_rf_we,	// @[src/main/pipeline/IDU.scala:10:16]
-                io_to_es_mem_we,	// @[src/main/pipeline/IDU.scala:10:16]
+  output [3:0]  io_to_es_rf_we,	// @[src/main/pipeline/IDU.scala:10:16]
+  output        io_to_es_mem_en,	// @[src/main/pipeline/IDU.scala:10:16]
+  output [3:0]  io_to_es_mem_we,	// @[src/main/pipeline/IDU.scala:10:16]
   output [4:0]  io_to_es_dest,	// @[src/main/pipeline/IDU.scala:10:16]
   output [31:0] io_to_es_rd_value,	// @[src/main/pipeline/IDU.scala:10:16]
                 io_to_es_pc,	// @[src/main/pipeline/IDU.scala:10:16]
-  output        io_br_taken,	// @[src/main/pipeline/IDU.scala:10:16]
+  output        io_ds_allowin,	// @[src/main/pipeline/IDU.scala:10:16]
+                io_br_taken,	// @[src/main/pipeline/IDU.scala:10:16]
   output [31:0] io_br_target,	// @[src/main/pipeline/IDU.scala:10:16]
-                io_rj,	// @[src/main/pipeline/IDU.scala:10:16]
+  output [4:0]  io_rj,	// @[src/main/pipeline/IDU.scala:10:16]
                 io_rk,	// @[src/main/pipeline/IDU.scala:10:16]
                 io_rd,	// @[src/main/pipeline/IDU.scala:10:16]
   input  [31:0] io_reg_rdata1,	// @[src/main/pipeline/IDU.scala:10:16]
                 io_reg_rdata2,	// @[src/main/pipeline/IDU.scala:10:16]
-                io_reg_rdata3	// @[src/main/pipeline/IDU.scala:10:16]
+                io_reg_rdata3,	// @[src/main/pipeline/IDU.scala:10:16]
+  input  [4:0]  io_rd_es,	// @[src/main/pipeline/IDU.scala:10:16]
+                io_rd_ms,	// @[src/main/pipeline/IDU.scala:10:16]
+                io_rd_ws	// @[src/main/pipeline/IDU.scala:10:16]
 );
 
-  reg         ds_valid;	// @[src/main/pipeline/IDU.scala:24:27]
-  reg  [31:0] inst;	// @[src/main/pipeline/IDU.scala:34:23]
-  reg  [31:0] pc;	// @[src/main/pipeline/IDU.scala:35:23]
-  wire [31:0] ui5 = {27'h0, inst[14:10]};	// @[src/main/pipeline/IDU.scala:34:23, :41:11, :43:{11,18}]
-  wire [31:0] si16 = {{14{inst[25]}}, inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :61:16, :64:{16,21,29}]
-  wire        _decode_T_1 = inst[31:15] == 17'h20;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_3 = inst[31:15] == 17'h22;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_5 = inst[31:15] == 17'h24;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_7 = inst[31:15] == 17'h25;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_9 = inst[31:15] == 17'h28;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_11 = inst[31:15] == 17'h2A;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_13 = inst[31:15] == 17'h29;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_15 = inst[31:15] == 17'h2B;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_17 = inst[31:15] == 17'h81;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_19 = inst[31:15] == 17'h89;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_21 = inst[31:15] == 17'h91;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_23 = inst[31:22] == 10'hA;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_25 = inst[31:22] == 10'hA2;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_27 = inst[31:22] == 10'hA6;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_29 = inst[31:26] == 6'h13;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_31 = inst[31:26] == 6'h14;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_33 = inst[31:26] == 6'h15;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_35 = inst[31:26] == 6'h16;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_37 = inst[31:26] == 6'h17;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
-  wire        _decode_T_135 = inst[31:25] == 7'hA;	// @[src/main/pipeline/IDU.scala:34:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        ds_ready_go;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
+  reg         ds_valid;	// @[src/main/pipeline/IDU.scala:27:27]
+  wire        io_ds_allowin_0 = ~ds_valid | ds_ready_go;	// @[src/main/pipeline/IDU.scala:27:27, :30:{23,34}, src/main/scala/chisel3/util/Mux.scala:126:16]
+  reg  [31:0] inst;	// @[src/main/pipeline/IDU.scala:36:23]
+  reg  [31:0] pc;	// @[src/main/pipeline/IDU.scala:37:23]
+  wire        _decode_T_1 = inst[31:15] == 17'h20;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_3 = inst[31:15] == 17'h22;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_5 = inst[31:15] == 17'h24;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_7 = inst[31:15] == 17'h25;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_9 = inst[31:15] == 17'h28;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_11 = inst[31:15] == 17'h2A;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_13 = inst[31:15] == 17'h29;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_15 = inst[31:15] == 17'h2B;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_17 = inst[31:15] == 17'h81;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_19 = inst[31:15] == 17'h89;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_21 = inst[31:15] == 17'h91;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_23 = inst[31:22] == 10'hA;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_25 = inst[31:22] == 10'hA2;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_122 = inst[31:22] == 10'hA6;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_29 = inst[31:26] == 6'h13;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_31 = inst[31:26] == 6'h14;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_33 = inst[31:26] == 6'h15;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_35 = inst[31:26] == 6'h16;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_37 = inst[31:26] == 6'h17;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
+  wire        _decode_T_39 = inst[31:25] == 7'hA;	// @[src/main/pipeline/IDU.scala:36:23, src/main/scala/chisel3/util/Lookup.scala:31:38]
   wire        _GEN = _decode_T_35 | _decode_T_37;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   wire        _GEN_0 = _decode_T_31 | _decode_T_33 | _GEN;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire        _GEN_1 = _decode_T_23 | _decode_T_25 | _decode_T_27;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_1 = _decode_T_23 | _decode_T_25 | _decode_T_122;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   wire [2:0]  decode_1 =
     _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
     | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21 | _GEN_1
@@ -179,41 +188,100 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
       : _decode_T_29 | _decode_T_31
           ? 3'h1
           : _decode_T_33 ? 3'h4 : _decode_T_35 ? 3'h3 : {1'h0, _decode_T_37, 1'h0};	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire [31:0] decode_2 =
-    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
-    | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23 | _decode_T_25 | _decode_T_27 | _decode_T_29
-      ? io_reg_rdata1
-      : _GEN_0 ? pc : 32'h0;	// @[src/main/pipeline/IDU.scala:35:23, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire [31:0] decode_3 =
-    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
-    | _decode_T_13 | _decode_T_15
-      ? io_reg_rdata2
-      : _decode_T_17 | _decode_T_19 | _decode_T_21
-          ? ui5
-          : _GEN_1
-              ? {{20{inst[21]}}, inst[21:10]}
-              : _decode_T_29
-                  ? si16
-                  : _decode_T_31 | _decode_T_33
-                      ? {{4{inst[9]}}, inst[9:0], inst[25:10], 2'h0}
-                      : _GEN ? si16 : _decode_T_135 ? {inst[24:5], 12'h0} : 32'h0;	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :43:11, :60:16, :61:16, :62:16, :63:{16,21,29}, :64:16, :65:16, :66:{16,21,29,39}, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   wire        _GEN_2 =
     _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
     | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23 | _decode_T_25;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire        _io_to_es_dest_T = decode_1 == 3'h4;	// @[src/main/pipeline/IDU.scala:95:37, src/main/scala/chisel3/util/Lookup.scala:34:39]
+    | _decode_T_23 | _decode_T_25 | _decode_T_122 | _decode_T_29;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire [1:0]  decode_2 = _GEN_2 ? 2'h1 : {_GEN_0, 1'h0};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
+  wire        _GEN_3 = _decode_T_31 | _decode_T_33;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_4 =
+    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
+    | _decode_T_13 | _decode_T_15;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_5 =
+    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
+    | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
+    | _decode_T_23;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_6 =
+    _decode_T_17 | _decode_T_19 | _decode_T_21 | _decode_T_23 | _decode_T_25;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_7 =
+    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
+    | _decode_T_13 | _decode_T_15 | _GEN_6;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire [3:0]  decode_6 =
+    _GEN_7
+      ? 4'hF
+      : _decode_T_122
+          ? 4'h0
+          : _decode_T_29
+              ? 4'hF
+              : _decode_T_31
+                  ? 4'h0
+                  : _decode_T_33 ? 4'hF : _GEN ? 4'h0 : {4{_decode_T_39}};	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire [4:0]  rs1 = _GEN_2 | ~_GEN_3 & _GEN ? inst[9:5] : 5'h0;	// @[src/main/pipeline/IDU.scala:36:23, :44:18, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  reg  [4:0]  casez_tmp;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
+  always_comb begin	// @[src/main/pipeline/IDU.scala:105:19, :106:19, :107:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+    casez (_GEN_4
+             ? 2'h2
+             : _GEN_6
+                 ? 2'h0
+                 : _decode_T_122 ? 2'h3 : _decode_T_29 | _GEN_3 ? 2'h0 : {2{_GEN}})	// @[src/main/pipeline/IDU.scala:9:7, :105:19, :106:19, :107:19, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b00:
+        casez_tmp = 5'h0;	// @[src/main/pipeline/IDU.scala:105:19, :106:19, :107:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b01:
+        casez_tmp = inst[9:5];	// @[src/main/pipeline/IDU.scala:36:23, :44:18, :105:19, :106:19, :107:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b10:
+        casez_tmp = inst[14:10];	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :105:19, :106:19, :107:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      default:
+        casez_tmp = inst[4:0];	// @[src/main/pipeline/IDU.scala:36:23, :43:18, :105:19, :106:19, :107:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+    endcase	// @[src/main/pipeline/IDU.scala:9:7, :105:19, :106:19, :107:19, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  end // always_comb
+  assign ds_ready_go =
+    ~((|io_rd_es) & (rs1 == io_rd_es | casez_tmp == io_rd_es) | (|io_rd_ms)
+      & (rs1 == io_rd_ms | casez_tmp == io_rd_ms))
+    & ~((|io_rd_ws) & (rs1 == io_rd_ws | casez_tmp == io_rd_ws));	// @[src/main/pipeline/IDU.scala:111:{19,34,42,55,62}, :112:{19,34,42,55,62}, :113:{19,34,42,55,62}, src/main/scala/chisel3/util/Mux.scala:126:16]
+  wire [31:0] src1_data =
+    decode_2 == 2'h1 ? io_reg_rdata1 : decode_2 == 2'h2 ? pc : 32'h0;	// @[src/main/pipeline/IDU.scala:9:7, :37:23, :118:20, :119:20, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  reg  [31:0] casez_tmp_0;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
+  always_comb begin	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+    casez (_GEN_4
+             ? 3'h1
+             : _decode_T_17 | _decode_T_19 | _decode_T_21
+                 ? 3'h2
+                 : _GEN_1
+                     ? 3'h3
+                     : _decode_T_29
+                         ? 3'h4
+                         : _GEN_3 ? 3'h6 : _GEN ? 3'h4 : _decode_T_39 ? 3'h5 : 3'h0)	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b000:
+        casez_tmp_0 = 32'h0;	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b001:
+        casez_tmp_0 = io_reg_rdata2;	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b010:
+        casez_tmp_0 = {27'h0, inst[14:10]};	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :61:9, :124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b011:
+        casez_tmp_0 = {{20{inst[21]}}, inst[21:10]};	// @[src/main/pipeline/IDU.scala:36:23, :62:16, :65:{16,21,29}, :124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b100:
+        casez_tmp_0 = {{14{inst[25]}}, inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :63:16, :66:{16,21,29}, :124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b101:
+        casez_tmp_0 = {inst[24:5], 12'h0};	// @[src/main/pipeline/IDU.scala:36:23, :64:16, :67:16, :124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      3'b110:
+        casez_tmp_0 = {{4{inst[9]}}, inst[9:0], inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :63:16, :68:{16,21,29,39}, :124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+      default:
+        casez_tmp_0 = 32'h0;	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+    endcase	// @[src/main/pipeline/IDU.scala:124:20, :125:20, :126:20, :127:20, :128:20, :129:20, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  end // always_comb
+  wire        _io_to_es_dest_T = decode_1 == 3'h4;	// @[src/main/pipeline/IDU.scala:133:37, src/main/scala/chisel3/util/Lookup.scala:34:39]
   always @(posedge clock) begin	// @[src/main/pipeline/IDU.scala:9:7]
     if (reset) begin	// @[src/main/pipeline/IDU.scala:9:7]
-      ds_valid <= 1'h0;	// @[src/main/pipeline/IDU.scala:24:27]
-      inst <= 32'h0;	// @[src/main/pipeline/IDU.scala:34:23]
-      pc <= 32'h0;	// @[src/main/pipeline/IDU.scala:35:23]
+      ds_valid <= 1'h0;	// @[src/main/pipeline/IDU.scala:27:27]
+      inst <= 32'h0;	// @[src/main/pipeline/IDU.scala:36:23]
+      pc <= 32'h0;	// @[src/main/pipeline/IDU.scala:37:23]
     end
     else begin	// @[src/main/pipeline/IDU.scala:9:7]
-      ds_valid <= io_to_ds_valid;	// @[src/main/pipeline/IDU.scala:24:27]
-      if (io_to_ds_valid) begin	// @[src/main/pipeline/IDU.scala:10:16]
-        inst <= io_to_ds_inst;	// @[src/main/pipeline/IDU.scala:34:23]
-        pc <= io_to_ds_pc;	// @[src/main/pipeline/IDU.scala:35:23]
+      if (io_ds_allowin_0)	// @[src/main/pipeline/IDU.scala:30:34]
+        ds_valid <= io_to_ds_valid;	// @[src/main/pipeline/IDU.scala:27:27]
+      if (io_ds_allowin_0 & io_to_ds_valid) begin	// @[src/main/pipeline/IDU.scala:30:34, :38:25]
+        inst <= io_to_ds_inst;	// @[src/main/pipeline/IDU.scala:36:23]
+        pc <= io_to_ds_pc;	// @[src/main/pipeline/IDU.scala:37:23]
       end
     end
   end // always @(posedge)
@@ -230,16 +298,16 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
         for (logic [1:0] i = 2'h0; i < 2'h3; i += 2'h1) begin
           _RANDOM[i] = `RANDOM;	// @[src/main/pipeline/IDU.scala:9:7]
         end	// @[src/main/pipeline/IDU.scala:9:7]
-        ds_valid = _RANDOM[2'h0][0];	// @[src/main/pipeline/IDU.scala:9:7, :24:27]
-        inst = {_RANDOM[2'h0][31:1], _RANDOM[2'h1][0]};	// @[src/main/pipeline/IDU.scala:9:7, :24:27, :34:23]
-        pc = {_RANDOM[2'h1][31:1], _RANDOM[2'h2][0]};	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :35:23]
+        ds_valid = _RANDOM[2'h0][0];	// @[src/main/pipeline/IDU.scala:9:7, :27:27]
+        inst = {_RANDOM[2'h0][31:1], _RANDOM[2'h1][0]};	// @[src/main/pipeline/IDU.scala:9:7, :27:27, :36:23]
+        pc = {_RANDOM[2'h1][31:1], _RANDOM[2'h2][0]};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :37:23]
       `endif // RANDOMIZE_REG_INIT
     end // initial
     `ifdef FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/IDU.scala:9:7]
       `FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/IDU.scala:9:7]
     `endif // FIRRTL_AFTER_INITIAL
   `endif // ENABLE_INITIAL_REG_
-  assign io_to_es_valid = ds_valid;	// @[src/main/pipeline/IDU.scala:9:7, :24:27]
+  assign io_to_es_valid = ds_valid & ds_ready_go;	// @[src/main/pipeline/IDU.scala:9:7, :27:27, :34:32, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_alu_op =
     {8'h0,
      _decode_T_1
@@ -268,39 +336,38 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
                                                    ? 4'h0
                                                    : _decode_T_29 | _GEN_0
                                                        ? 4'hF
-                                                       : {1'h1, ~_decode_T_135, 2'h3}};	// @[src/main/pipeline/IDU.scala:9:7, :101:21, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign io_to_es_src1_data = decode_2;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
-  assign io_to_es_src2_data = decode_3;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
+                                                       : {1'h1, ~_decode_T_39, 2'h3}};	// @[src/main/pipeline/IDU.scala:9:7, :139:21, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_src1_data = src1_data;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_to_es_src2_data = casez_tmp_0;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_wb_src =
-    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
-    | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23
+    _GEN_5
       ? 2'h1
       : _decode_T_25
           ? 2'h3
-          : _decode_T_27
+          : _decode_T_122
               ? 2'h0
               : _decode_T_29
                   ? 2'h2
                   : _decode_T_31
                       ? 2'h0
-                      : _decode_T_33 ? 2'h2 : _GEN ? 2'h0 : {1'h0, _decode_T_135};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign io_to_es_rf_we =
-    _GEN_2 | ~_decode_T_27
-    & (_decode_T_29 | ~_decode_T_31 & (_decode_T_33 | ~_GEN & _decode_T_135));	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign io_to_es_mem_we = ~_GEN_2 & _decode_T_27;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign io_to_es_dest = _io_to_es_dest_T ? 5'h1 : inst[4:0];	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :41:18, :95:37, :108:25]
+                      : _decode_T_33 ? 2'h2 : _GEN ? 2'h0 : {1'h0, _decode_T_39};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_rf_we = decode_6;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
+  assign io_to_es_mem_en = ~_GEN_5 & (_decode_T_25 | _decode_T_122);	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_mem_we = _GEN_7 ? 4'h0 : {4{_decode_T_122}};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_dest = _io_to_es_dest_T ? 5'h1 : (|decode_6) ? inst[4:0] : 5'h0;	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :43:18, :133:37, :149:16, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_rd_value = io_reg_rdata3;	// @[src/main/pipeline/IDU.scala:9:7]
-  assign io_to_es_pc = pc;	// @[src/main/pipeline/IDU.scala:9:7, :35:23]
+  assign io_to_es_pc = pc;	// @[src/main/pipeline/IDU.scala:9:7, :37:23]
+  assign io_ds_allowin = io_ds_allowin_0;	// @[src/main/pipeline/IDU.scala:9:7, :30:34]
   assign io_br_taken =
-    decode_1 == 3'h1 | _io_to_es_dest_T
-    | (decode_1 == 3'h2
-         ? io_reg_rdata1 != io_reg_rdata3
-         : decode_1 == 3'h3 & io_reg_rdata1 == io_reg_rdata3);	// @[src/main/pipeline/IDU.scala:9:7, :95:{17,27,37}, :96:{16,41}, :97:{16,41}, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
-  assign io_br_target = decode_2 + decode_3;	// @[src/main/pipeline/IDU.scala:9:7, :99:31, src/main/scala/chisel3/util/Lookup.scala:34:39]
-  assign io_rj = {27'h0, inst[9:5]};	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :41:11, :42:{11,18}]
-  assign io_rk = ui5;	// @[src/main/pipeline/IDU.scala:9:7, :43:11]
-  assign io_rd = {27'h0, inst[4:0]};	// @[src/main/pipeline/IDU.scala:9:7, :34:23, :41:{11,18}]
+    ds_valid
+    & (decode_1 == 3'h1 | _io_to_es_dest_T
+       | (decode_1 == 3'h2
+            ? io_reg_rdata1 != io_reg_rdata3
+            : decode_1 == 3'h3 & io_reg_rdata1 == io_reg_rdata3));	// @[src/main/pipeline/IDU.scala:9:7, :27:27, :132:23, :133:{17,27,37}, :134:{16,41}, :135:{16,41}, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_br_target = src1_data + casez_tmp_0;	// @[src/main/pipeline/IDU.scala:9:7, :137:31, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_rj = inst[9:5];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :44:18]
+  assign io_rk = inst[14:10];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :45:18]
+  assign io_rd = inst[4:0];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :43:18]
 endmodule
 
 module ALU(	// @[src/main/alu.scala:8:7]
@@ -348,56 +415,62 @@ module EXE_Stage(	// @[src/main/pipeline/EXE.scala:8:7]
   input  [31:0] io_to_es_src1_data,	// @[src/main/pipeline/EXE.scala:9:16]
                 io_to_es_src2_data,	// @[src/main/pipeline/EXE.scala:9:16]
   input  [1:0]  io_to_es_wb_src,	// @[src/main/pipeline/EXE.scala:9:16]
-  input         io_to_es_rf_we,	// @[src/main/pipeline/EXE.scala:9:16]
-                io_to_es_mem_we,	// @[src/main/pipeline/EXE.scala:9:16]
+  input  [3:0]  io_to_es_rf_we,	// @[src/main/pipeline/EXE.scala:9:16]
+  input         io_to_es_mem_en,	// @[src/main/pipeline/EXE.scala:9:16]
+  input  [3:0]  io_to_es_mem_we,	// @[src/main/pipeline/EXE.scala:9:16]
   input  [4:0]  io_to_es_dest,	// @[src/main/pipeline/EXE.scala:9:16]
   input  [31:0] io_to_es_rd_value,	// @[src/main/pipeline/EXE.scala:9:16]
                 io_to_es_pc,	// @[src/main/pipeline/EXE.scala:9:16]
   output        io_to_ms_valid,	// @[src/main/pipeline/EXE.scala:9:16]
   output [1:0]  io_to_ms_wb_src,	// @[src/main/pipeline/EXE.scala:9:16]
-  output        io_to_ms_rf_we,	// @[src/main/pipeline/EXE.scala:9:16]
-                io_to_ms_mem_we,	// @[src/main/pipeline/EXE.scala:9:16]
+  output [3:0]  io_to_ms_rf_we,	// @[src/main/pipeline/EXE.scala:9:16]
+  output        io_to_ms_mem_en,	// @[src/main/pipeline/EXE.scala:9:16]
+  output [3:0]  io_to_ms_mem_we,	// @[src/main/pipeline/EXE.scala:9:16]
   output [4:0]  io_to_ms_dest,	// @[src/main/pipeline/EXE.scala:9:16]
   output [31:0] io_to_ms_rd_value,	// @[src/main/pipeline/EXE.scala:9:16]
                 io_to_ms_alu_res,	// @[src/main/pipeline/EXE.scala:9:16]
-                io_to_ms_pc	// @[src/main/pipeline/EXE.scala:9:16]
+                io_to_ms_pc,	// @[src/main/pipeline/EXE.scala:9:16]
+  output [4:0]  io_rd_es	// @[src/main/pipeline/EXE.scala:9:16]
 );
 
-  reg        es_valid;	// @[src/main/pipeline/EXE.scala:16:27]
-  reg [31:0] dest;	// @[src/main/pipeline/EXE.scala:26:30]
-  reg [3:0]  alu_op;	// @[src/main/pipeline/EXE.scala:27:30]
-  reg [31:0] src1_data;	// @[src/main/pipeline/EXE.scala:28:30]
-  reg [31:0] src2_data;	// @[src/main/pipeline/EXE.scala:29:30]
-  reg [3:0]  mem_we;	// @[src/main/pipeline/EXE.scala:30:30]
-  reg [3:0]  rf_we;	// @[src/main/pipeline/EXE.scala:31:30]
-  reg [1:0]  wb_src;	// @[src/main/pipeline/EXE.scala:32:30]
-  reg [31:0] pc;	// @[src/main/pipeline/EXE.scala:33:30]
-  reg [31:0] rd_value;	// @[src/main/pipeline/EXE.scala:34:30]
+  reg        es_valid;	// @[src/main/pipeline/EXE.scala:17:27]
+  reg [31:0] dest;	// @[src/main/pipeline/EXE.scala:27:30]
+  reg [3:0]  alu_op;	// @[src/main/pipeline/EXE.scala:28:30]
+  reg [31:0] src1_data;	// @[src/main/pipeline/EXE.scala:29:30]
+  reg [31:0] src2_data;	// @[src/main/pipeline/EXE.scala:30:30]
+  reg        mem_en;	// @[src/main/pipeline/EXE.scala:31:30]
+  reg [3:0]  mem_we;	// @[src/main/pipeline/EXE.scala:32:30]
+  reg [3:0]  rf_we;	// @[src/main/pipeline/EXE.scala:33:30]
+  reg [1:0]  wb_src;	// @[src/main/pipeline/EXE.scala:34:30]
+  reg [31:0] pc;	// @[src/main/pipeline/EXE.scala:35:30]
+  reg [31:0] rd_value;	// @[src/main/pipeline/EXE.scala:36:30]
   always @(posedge clock) begin	// @[src/main/pipeline/EXE.scala:8:7]
     if (reset) begin	// @[src/main/pipeline/EXE.scala:8:7]
-      es_valid <= 1'h0;	// @[src/main/pipeline/EXE.scala:16:27]
-      dest <= 32'h0;	// @[src/main/pipeline/EXE.scala:26:30]
-      alu_op <= 4'h0;	// @[src/main/pipeline/EXE.scala:27:30]
-      src1_data <= 32'h0;	// @[src/main/pipeline/EXE.scala:28:30]
-      src2_data <= 32'h0;	// @[src/main/pipeline/EXE.scala:29:30]
-      mem_we <= 4'h0;	// @[src/main/pipeline/EXE.scala:30:30]
-      rf_we <= 4'h0;	// @[src/main/pipeline/EXE.scala:31:30]
-      wb_src <= 2'h0;	// @[src/main/pipeline/EXE.scala:32:30]
-      pc <= 32'h0;	// @[src/main/pipeline/EXE.scala:33:30]
-      rd_value <= 32'h0;	// @[src/main/pipeline/EXE.scala:34:30]
+      es_valid <= 1'h0;	// @[src/main/pipeline/EXE.scala:17:27]
+      dest <= 32'h0;	// @[src/main/pipeline/EXE.scala:27:30]
+      alu_op <= 4'h0;	// @[src/main/pipeline/EXE.scala:28:30]
+      src1_data <= 32'h0;	// @[src/main/pipeline/EXE.scala:29:30]
+      src2_data <= 32'h0;	// @[src/main/pipeline/EXE.scala:30:30]
+      mem_en <= 1'h0;	// @[src/main/pipeline/EXE.scala:31:30]
+      mem_we <= 4'h0;	// @[src/main/pipeline/EXE.scala:32:30]
+      rf_we <= 4'h0;	// @[src/main/pipeline/EXE.scala:33:30]
+      wb_src <= 2'h0;	// @[src/main/pipeline/EXE.scala:34:30]
+      pc <= 32'h0;	// @[src/main/pipeline/EXE.scala:35:30]
+      rd_value <= 32'h0;	// @[src/main/pipeline/EXE.scala:36:30]
     end
     else begin	// @[src/main/pipeline/EXE.scala:8:7]
-      es_valid <= io_to_es_valid;	// @[src/main/pipeline/EXE.scala:16:27]
+      es_valid <= io_to_es_valid;	// @[src/main/pipeline/EXE.scala:17:27]
       if (io_to_es_valid) begin	// @[src/main/pipeline/EXE.scala:9:16]
-        dest <= {27'h0, io_to_es_dest};	// @[src/main/pipeline/EXE.scala:26:30, :37:21]
-        alu_op <= io_to_es_alu_op[3:0];	// @[src/main/pipeline/EXE.scala:27:30, :38:21]
-        src1_data <= io_to_es_src1_data;	// @[src/main/pipeline/EXE.scala:28:30]
-        src2_data <= io_to_es_src2_data;	// @[src/main/pipeline/EXE.scala:29:30]
-        mem_we <= {3'h0, io_to_es_mem_we};	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :41:21]
-        rf_we <= {3'h0, io_to_es_rf_we};	// @[src/main/pipeline/EXE.scala:8:7, :31:30, :42:21]
-        wb_src <= io_to_es_wb_src;	// @[src/main/pipeline/EXE.scala:32:30]
-        pc <= io_to_es_pc;	// @[src/main/pipeline/EXE.scala:33:30]
-        rd_value <= io_to_es_rd_value;	// @[src/main/pipeline/EXE.scala:34:30]
+        dest <= {27'h0, io_to_es_dest};	// @[src/main/pipeline/EXE.scala:27:30, :39:21]
+        alu_op <= io_to_es_alu_op[3:0];	// @[src/main/pipeline/EXE.scala:28:30, :40:21]
+        src1_data <= io_to_es_src1_data;	// @[src/main/pipeline/EXE.scala:29:30]
+        src2_data <= io_to_es_src2_data;	// @[src/main/pipeline/EXE.scala:30:30]
+        mem_en <= io_to_es_mem_en;	// @[src/main/pipeline/EXE.scala:31:30]
+        mem_we <= io_to_es_mem_we;	// @[src/main/pipeline/EXE.scala:32:30]
+        rf_we <= io_to_es_rf_we;	// @[src/main/pipeline/EXE.scala:33:30]
+        wb_src <= io_to_es_wb_src;	// @[src/main/pipeline/EXE.scala:34:30]
+        pc <= io_to_es_pc;	// @[src/main/pipeline/EXE.scala:35:30]
+        rd_value <= io_to_es_rd_value;	// @[src/main/pipeline/EXE.scala:36:30]
       end
     end
   end // always @(posedge)
@@ -414,35 +487,38 @@ module EXE_Stage(	// @[src/main/pipeline/EXE.scala:8:7]
         for (logic [2:0] i = 3'h0; i < 3'h6; i += 3'h1) begin
           _RANDOM[i] = `RANDOM;	// @[src/main/pipeline/EXE.scala:8:7]
         end	// @[src/main/pipeline/EXE.scala:8:7]
-        es_valid = _RANDOM[3'h0][0];	// @[src/main/pipeline/EXE.scala:8:7, :16:27]
-        dest = {_RANDOM[3'h0][31:1], _RANDOM[3'h1][0]};	// @[src/main/pipeline/EXE.scala:8:7, :16:27, :26:30]
-        alu_op = _RANDOM[3'h1][4:1];	// @[src/main/pipeline/EXE.scala:8:7, :26:30, :27:30]
-        src1_data = {_RANDOM[3'h1][31:5], _RANDOM[3'h2][4:0]};	// @[src/main/pipeline/EXE.scala:8:7, :26:30, :28:30]
-        src2_data = {_RANDOM[3'h2][31:5], _RANDOM[3'h3][4:0]};	// @[src/main/pipeline/EXE.scala:8:7, :28:30, :29:30]
-        mem_we = _RANDOM[3'h3][8:5];	// @[src/main/pipeline/EXE.scala:8:7, :29:30, :30:30]
-        rf_we = _RANDOM[3'h3][12:9];	// @[src/main/pipeline/EXE.scala:8:7, :29:30, :31:30]
-        wb_src = _RANDOM[3'h3][14:13];	// @[src/main/pipeline/EXE.scala:8:7, :29:30, :32:30]
-        pc = {_RANDOM[3'h3][31:15], _RANDOM[3'h4][14:0]};	// @[src/main/pipeline/EXE.scala:8:7, :29:30, :33:30]
-        rd_value = {_RANDOM[3'h4][31:15], _RANDOM[3'h5][14:0]};	// @[src/main/pipeline/EXE.scala:8:7, :33:30, :34:30]
+        es_valid = _RANDOM[3'h0][0];	// @[src/main/pipeline/EXE.scala:8:7, :17:27]
+        dest = {_RANDOM[3'h0][31:1], _RANDOM[3'h1][0]};	// @[src/main/pipeline/EXE.scala:8:7, :17:27, :27:30]
+        alu_op = _RANDOM[3'h1][4:1];	// @[src/main/pipeline/EXE.scala:8:7, :27:30, :28:30]
+        src1_data = {_RANDOM[3'h1][31:5], _RANDOM[3'h2][4:0]};	// @[src/main/pipeline/EXE.scala:8:7, :27:30, :29:30]
+        src2_data = {_RANDOM[3'h2][31:5], _RANDOM[3'h3][4:0]};	// @[src/main/pipeline/EXE.scala:8:7, :29:30, :30:30]
+        mem_en = _RANDOM[3'h3][5];	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :31:30]
+        mem_we = _RANDOM[3'h3][9:6];	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :32:30]
+        rf_we = _RANDOM[3'h3][13:10];	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :33:30]
+        wb_src = _RANDOM[3'h3][15:14];	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :34:30]
+        pc = {_RANDOM[3'h3][31:16], _RANDOM[3'h4][15:0]};	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :35:30]
+        rd_value = {_RANDOM[3'h4][31:16], _RANDOM[3'h5][15:0]};	// @[src/main/pipeline/EXE.scala:8:7, :35:30, :36:30]
       `endif // RANDOMIZE_REG_INIT
     end // initial
     `ifdef FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/EXE.scala:8:7]
       `FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/EXE.scala:8:7]
     `endif // FIRRTL_AFTER_INITIAL
   `endif // ENABLE_INITIAL_REG_
-  ALU u_alu (	// @[src/main/pipeline/EXE.scala:50:23]
-    .io_aluOp     (alu_op),	// @[src/main/pipeline/EXE.scala:27:30]
-    .io_aluSrc1   (src1_data),	// @[src/main/pipeline/EXE.scala:28:30]
-    .io_aluSrc2   (src2_data),	// @[src/main/pipeline/EXE.scala:29:30]
+  ALU u_alu (	// @[src/main/pipeline/EXE.scala:53:23]
+    .io_aluOp     (alu_op),	// @[src/main/pipeline/EXE.scala:28:30]
+    .io_aluSrc1   (src1_data),	// @[src/main/pipeline/EXE.scala:29:30]
+    .io_aluSrc2   (src2_data),	// @[src/main/pipeline/EXE.scala:30:30]
     .io_aluResult (io_to_ms_alu_res)
-  );	// @[src/main/pipeline/EXE.scala:50:23]
-  assign io_to_ms_valid = es_valid;	// @[src/main/pipeline/EXE.scala:8:7, :16:27]
-  assign io_to_ms_wb_src = wb_src;	// @[src/main/pipeline/EXE.scala:8:7, :32:30]
-  assign io_to_ms_rf_we = rf_we[0];	// @[src/main/pipeline/EXE.scala:8:7, :31:30, :57:23]
-  assign io_to_ms_mem_we = mem_we[0];	// @[src/main/pipeline/EXE.scala:8:7, :30:30, :63:23]
-  assign io_to_ms_dest = dest[4:0];	// @[src/main/pipeline/EXE.scala:8:7, :26:30, :58:23]
-  assign io_to_ms_rd_value = rd_value;	// @[src/main/pipeline/EXE.scala:8:7, :34:30]
-  assign io_to_ms_pc = pc;	// @[src/main/pipeline/EXE.scala:8:7, :33:30]
+  );	// @[src/main/pipeline/EXE.scala:53:23]
+  assign io_to_ms_valid = es_valid;	// @[src/main/pipeline/EXE.scala:8:7, :17:27]
+  assign io_to_ms_wb_src = wb_src;	// @[src/main/pipeline/EXE.scala:8:7, :34:30]
+  assign io_to_ms_rf_we = rf_we;	// @[src/main/pipeline/EXE.scala:8:7, :33:30]
+  assign io_to_ms_mem_en = mem_en;	// @[src/main/pipeline/EXE.scala:8:7, :31:30]
+  assign io_to_ms_mem_we = mem_we;	// @[src/main/pipeline/EXE.scala:8:7, :32:30]
+  assign io_to_ms_dest = dest[4:0];	// @[src/main/pipeline/EXE.scala:8:7, :27:30, :61:23]
+  assign io_to_ms_rd_value = rd_value;	// @[src/main/pipeline/EXE.scala:8:7, :36:30]
+  assign io_to_ms_pc = pc;	// @[src/main/pipeline/EXE.scala:8:7, :35:30]
+  assign io_rd_es = es_valid ? dest[4:0] : 5'h0;	// @[src/main/pipeline/EXE.scala:8:7, :17:27, :27:30, :69:20]
 endmodule
 
 module MEM_Stage(	// @[src/main/pipeline/MEM.scala:8:7]
@@ -450,52 +526,58 @@ module MEM_Stage(	// @[src/main/pipeline/MEM.scala:8:7]
                 reset,	// @[src/main/pipeline/MEM.scala:8:7]
                 io_to_ms_valid,	// @[src/main/pipeline/MEM.scala:9:16]
   input  [1:0]  io_to_ms_wb_src,	// @[src/main/pipeline/MEM.scala:9:16]
-  input         io_to_ms_rf_we,	// @[src/main/pipeline/MEM.scala:9:16]
-                io_to_ms_mem_we,	// @[src/main/pipeline/MEM.scala:9:16]
+  input  [3:0]  io_to_ms_rf_we,	// @[src/main/pipeline/MEM.scala:9:16]
+  input         io_to_ms_mem_en,	// @[src/main/pipeline/MEM.scala:9:16]
+  input  [3:0]  io_to_ms_mem_we,	// @[src/main/pipeline/MEM.scala:9:16]
   input  [4:0]  io_to_ms_dest,	// @[src/main/pipeline/MEM.scala:9:16]
   input  [31:0] io_to_ms_rd_value,	// @[src/main/pipeline/MEM.scala:9:16]
                 io_to_ms_alu_res,	// @[src/main/pipeline/MEM.scala:9:16]
                 io_to_ms_pc,	// @[src/main/pipeline/MEM.scala:9:16]
   output        io_to_ws_valid,	// @[src/main/pipeline/MEM.scala:9:16]
   output [1:0]  io_to_ws_wb_src,	// @[src/main/pipeline/MEM.scala:9:16]
-  output        io_to_ws_rf_we,	// @[src/main/pipeline/MEM.scala:9:16]
+  output [3:0]  io_to_ws_rf_we,	// @[src/main/pipeline/MEM.scala:9:16]
   output [4:0]  io_to_ws_dest,	// @[src/main/pipeline/MEM.scala:9:16]
   output [31:0] io_to_ws_alu_res,	// @[src/main/pipeline/MEM.scala:9:16]
                 io_to_ws_pc,	// @[src/main/pipeline/MEM.scala:9:16]
+  output        io_data_en,	// @[src/main/pipeline/MEM.scala:9:16]
   output [3:0]  io_data_we,	// @[src/main/pipeline/MEM.scala:9:16]
   output [31:0] io_data_addr,	// @[src/main/pipeline/MEM.scala:9:16]
-                io_data_wdata	// @[src/main/pipeline/MEM.scala:9:16]
+                io_data_wdata,	// @[src/main/pipeline/MEM.scala:9:16]
+  output [4:0]  io_rd_ms	// @[src/main/pipeline/MEM.scala:9:16]
 );
 
-  reg        ms_valid;	// @[src/main/pipeline/MEM.scala:17:27]
-  reg [31:0] alu_res;	// @[src/main/pipeline/MEM.scala:27:30]
-  reg [1:0]  wb_src;	// @[src/main/pipeline/MEM.scala:28:30]
-  reg        mem_we;	// @[src/main/pipeline/MEM.scala:29:30]
-  reg        rf_we;	// @[src/main/pipeline/MEM.scala:30:30]
-  reg [4:0]  dest;	// @[src/main/pipeline/MEM.scala:31:30]
-  reg [31:0] rd_value;	// @[src/main/pipeline/MEM.scala:32:30]
-  reg [31:0] pc;	// @[src/main/pipeline/MEM.scala:33:30]
+  reg        ms_valid;	// @[src/main/pipeline/MEM.scala:18:27]
+  reg [31:0] alu_res;	// @[src/main/pipeline/MEM.scala:28:30]
+  reg        mem_en;	// @[src/main/pipeline/MEM.scala:29:30]
+  reg [3:0]  mem_we;	// @[src/main/pipeline/MEM.scala:30:30]
+  reg [3:0]  rf_we;	// @[src/main/pipeline/MEM.scala:31:30]
+  reg [1:0]  wb_src;	// @[src/main/pipeline/MEM.scala:32:30]
+  reg [4:0]  dest;	// @[src/main/pipeline/MEM.scala:33:30]
+  reg [31:0] rd_value;	// @[src/main/pipeline/MEM.scala:34:30]
+  reg [31:0] pc;	// @[src/main/pipeline/MEM.scala:35:30]
   always @(posedge clock) begin	// @[src/main/pipeline/MEM.scala:8:7]
     if (reset) begin	// @[src/main/pipeline/MEM.scala:8:7]
-      ms_valid <= 1'h0;	// @[src/main/pipeline/MEM.scala:17:27]
-      alu_res <= 32'h0;	// @[src/main/pipeline/MEM.scala:27:30]
-      wb_src <= 2'h0;	// @[src/main/pipeline/MEM.scala:8:7, :28:30]
-      mem_we <= 1'h0;	// @[src/main/pipeline/MEM.scala:29:30]
-      rf_we <= 1'h0;	// @[src/main/pipeline/MEM.scala:30:30]
-      dest <= 5'h0;	// @[src/main/pipeline/MEM.scala:31:30]
-      rd_value <= 32'h0;	// @[src/main/pipeline/MEM.scala:32:30]
-      pc <= 32'h0;	// @[src/main/pipeline/MEM.scala:33:30]
+      ms_valid <= 1'h0;	// @[src/main/pipeline/MEM.scala:18:27]
+      alu_res <= 32'h0;	// @[src/main/pipeline/MEM.scala:28:30]
+      mem_en <= 1'h0;	// @[src/main/pipeline/MEM.scala:29:30]
+      mem_we <= 4'h0;	// @[src/main/pipeline/MEM.scala:30:30]
+      rf_we <= 4'h0;	// @[src/main/pipeline/MEM.scala:31:30]
+      wb_src <= 2'h0;	// @[src/main/pipeline/MEM.scala:8:7, :32:30]
+      dest <= 5'h0;	// @[src/main/pipeline/MEM.scala:33:30]
+      rd_value <= 32'h0;	// @[src/main/pipeline/MEM.scala:34:30]
+      pc <= 32'h0;	// @[src/main/pipeline/MEM.scala:35:30]
     end
     else begin	// @[src/main/pipeline/MEM.scala:8:7]
-      ms_valid <= io_to_ms_valid;	// @[src/main/pipeline/MEM.scala:17:27]
+      ms_valid <= io_to_ms_valid;	// @[src/main/pipeline/MEM.scala:18:27]
       if (io_to_ms_valid) begin	// @[src/main/pipeline/MEM.scala:9:16]
-        alu_res <= io_to_ms_alu_res;	// @[src/main/pipeline/MEM.scala:27:30]
-        wb_src <= io_to_ms_wb_src;	// @[src/main/pipeline/MEM.scala:28:30]
-        mem_we <= io_to_ms_mem_we;	// @[src/main/pipeline/MEM.scala:29:30]
-        rf_we <= io_to_ms_rf_we;	// @[src/main/pipeline/MEM.scala:30:30]
-        dest <= io_to_ms_dest;	// @[src/main/pipeline/MEM.scala:31:30]
-        rd_value <= io_to_ms_rd_value;	// @[src/main/pipeline/MEM.scala:32:30]
-        pc <= io_to_ms_pc;	// @[src/main/pipeline/MEM.scala:33:30]
+        alu_res <= io_to_ms_alu_res;	// @[src/main/pipeline/MEM.scala:28:30]
+        mem_en <= io_to_ms_mem_en;	// @[src/main/pipeline/MEM.scala:29:30]
+        mem_we <= io_to_ms_mem_we;	// @[src/main/pipeline/MEM.scala:30:30]
+        rf_we <= io_to_ms_rf_we;	// @[src/main/pipeline/MEM.scala:31:30]
+        wb_src <= io_to_ms_wb_src;	// @[src/main/pipeline/MEM.scala:32:30]
+        dest <= io_to_ms_dest;	// @[src/main/pipeline/MEM.scala:33:30]
+        rd_value <= io_to_ms_rd_value;	// @[src/main/pipeline/MEM.scala:34:30]
+        pc <= io_to_ms_pc;	// @[src/main/pipeline/MEM.scala:35:30]
       end
     end
   end // always @(posedge)
@@ -512,29 +594,32 @@ module MEM_Stage(	// @[src/main/pipeline/MEM.scala:8:7]
         for (logic [2:0] i = 3'h0; i < 3'h4; i += 3'h1) begin
           _RANDOM[i[1:0]] = `RANDOM;	// @[src/main/pipeline/MEM.scala:8:7]
         end	// @[src/main/pipeline/MEM.scala:8:7]
-        ms_valid = _RANDOM[2'h0][0];	// @[src/main/pipeline/MEM.scala:8:7, :17:27]
-        alu_res = {_RANDOM[2'h0][31:1], _RANDOM[2'h1][0]};	// @[src/main/pipeline/MEM.scala:8:7, :17:27, :27:30]
-        wb_src = _RANDOM[2'h1][2:1];	// @[src/main/pipeline/MEM.scala:8:7, :27:30, :28:30]
-        mem_we = _RANDOM[2'h1][3];	// @[src/main/pipeline/MEM.scala:8:7, :27:30, :29:30]
-        rf_we = _RANDOM[2'h1][4];	// @[src/main/pipeline/MEM.scala:8:7, :27:30, :30:30]
-        dest = _RANDOM[2'h1][9:5];	// @[src/main/pipeline/MEM.scala:8:7, :27:30, :31:30]
-        rd_value = {_RANDOM[2'h1][31:10], _RANDOM[2'h2][9:0]};	// @[src/main/pipeline/MEM.scala:8:7, :27:30, :32:30]
-        pc = {_RANDOM[2'h2][31:10], _RANDOM[2'h3][9:0]};	// @[src/main/pipeline/MEM.scala:8:7, :32:30, :33:30]
+        ms_valid = _RANDOM[2'h0][0];	// @[src/main/pipeline/MEM.scala:8:7, :18:27]
+        alu_res = {_RANDOM[2'h0][31:1], _RANDOM[2'h1][0]};	// @[src/main/pipeline/MEM.scala:8:7, :18:27, :28:30]
+        mem_en = _RANDOM[2'h1][1];	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :29:30]
+        mem_we = _RANDOM[2'h1][5:2];	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :30:30]
+        rf_we = _RANDOM[2'h1][9:6];	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :31:30]
+        wb_src = _RANDOM[2'h1][11:10];	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :32:30]
+        dest = _RANDOM[2'h1][16:12];	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :33:30]
+        rd_value = {_RANDOM[2'h1][31:17], _RANDOM[2'h2][16:0]};	// @[src/main/pipeline/MEM.scala:8:7, :28:30, :34:30]
+        pc = {_RANDOM[2'h2][31:17], _RANDOM[2'h3][16:0]};	// @[src/main/pipeline/MEM.scala:8:7, :34:30, :35:30]
       `endif // RANDOMIZE_REG_INIT
     end // initial
     `ifdef FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/MEM.scala:8:7]
       `FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/MEM.scala:8:7]
     `endif // FIRRTL_AFTER_INITIAL
   `endif // ENABLE_INITIAL_REG_
-  assign io_to_ws_valid = ms_valid;	// @[src/main/pipeline/MEM.scala:8:7, :17:27]
-  assign io_to_ws_wb_src = wb_src;	// @[src/main/pipeline/MEM.scala:8:7, :28:30]
-  assign io_to_ws_rf_we = rf_we;	// @[src/main/pipeline/MEM.scala:8:7, :30:30]
-  assign io_to_ws_dest = dest;	// @[src/main/pipeline/MEM.scala:8:7, :31:30]
-  assign io_to_ws_alu_res = alu_res;	// @[src/main/pipeline/MEM.scala:8:7, :27:30]
-  assign io_to_ws_pc = pc;	// @[src/main/pipeline/MEM.scala:8:7, :33:30]
-  assign io_data_we = {4{mem_we}};	// @[src/main/pipeline/MEM.scala:8:7, :29:30, :46:23]
-  assign io_data_addr = alu_res;	// @[src/main/pipeline/MEM.scala:8:7, :27:30]
-  assign io_data_wdata = rd_value;	// @[src/main/pipeline/MEM.scala:8:7, :32:30]
+  assign io_to_ws_valid = ms_valid;	// @[src/main/pipeline/MEM.scala:8:7, :18:27]
+  assign io_to_ws_wb_src = wb_src;	// @[src/main/pipeline/MEM.scala:8:7, :32:30]
+  assign io_to_ws_rf_we = rf_we;	// @[src/main/pipeline/MEM.scala:8:7, :31:30]
+  assign io_to_ws_dest = dest;	// @[src/main/pipeline/MEM.scala:8:7, :33:30]
+  assign io_to_ws_alu_res = alu_res;	// @[src/main/pipeline/MEM.scala:8:7, :28:30]
+  assign io_to_ws_pc = pc;	// @[src/main/pipeline/MEM.scala:8:7, :35:30]
+  assign io_data_en = mem_en;	// @[src/main/pipeline/MEM.scala:8:7, :29:30]
+  assign io_data_we = mem_we;	// @[src/main/pipeline/MEM.scala:8:7, :30:30]
+  assign io_data_addr = alu_res;	// @[src/main/pipeline/MEM.scala:8:7, :28:30]
+  assign io_data_wdata = rd_value;	// @[src/main/pipeline/MEM.scala:8:7, :34:30]
+  assign io_rd_ms = ms_valid ? dest : 5'h0;	// @[src/main/pipeline/MEM.scala:8:7, :18:27, :33:30, :59:20]
 endmodule
 
 module WB_Stage(	// @[src/main/pipeline/WBU.scala:8:7]
@@ -542,7 +627,7 @@ module WB_Stage(	// @[src/main/pipeline/WBU.scala:8:7]
                 reset,	// @[src/main/pipeline/WBU.scala:8:7]
                 io_to_ws_valid,	// @[src/main/pipeline/WBU.scala:9:16]
   input  [1:0]  io_to_ws_wb_src,	// @[src/main/pipeline/WBU.scala:9:16]
-  input         io_to_ws_rf_we,	// @[src/main/pipeline/WBU.scala:9:16]
+  input  [3:0]  io_to_ws_rf_we,	// @[src/main/pipeline/WBU.scala:9:16]
   input  [4:0]  io_to_ws_dest,	// @[src/main/pipeline/WBU.scala:9:16]
   input  [31:0] io_to_ws_alu_res,	// @[src/main/pipeline/WBU.scala:9:16]
                 io_to_ws_pc,	// @[src/main/pipeline/WBU.scala:9:16]
@@ -551,43 +636,49 @@ module WB_Stage(	// @[src/main/pipeline/WBU.scala:8:7]
   output [4:0]  io_debug_wb_rf_wnum,	// @[src/main/pipeline/WBU.scala:9:16]
   output [31:0] io_debug_wb_rf_wdata,	// @[src/main/pipeline/WBU.scala:9:16]
   input  [31:0] io_data_rdata,	// @[src/main/pipeline/WBU.scala:9:16]
-  output        io_rf_we,	// @[src/main/pipeline/WBU.scala:9:16]
+  output [3:0]  io_rf_we,	// @[src/main/pipeline/WBU.scala:9:16]
   output [31:0] io_rf_waddr,	// @[src/main/pipeline/WBU.scala:9:16]
-                io_rf_wdata	// @[src/main/pipeline/WBU.scala:9:16]
+                io_rf_wdata,	// @[src/main/pipeline/WBU.scala:9:16]
+  output [4:0]  io_rd_ws	// @[src/main/pipeline/WBU.scala:9:16]
 );
 
-  reg [31:0] dest;	// @[src/main/pipeline/WBU.scala:28:23]
-  reg        rf_we;	// @[src/main/pipeline/WBU.scala:29:24]
-  reg [1:0]  wb_src;	// @[src/main/pipeline/WBU.scala:30:25]
-  reg [31:0] alu_res;	// @[src/main/pipeline/WBU.scala:32:26]
-  reg [31:0] pc;	// @[src/main/pipeline/WBU.scala:33:21]
+  reg        ws_valid;	// @[src/main/pipeline/WBU.scala:20:27]
+  reg [31:0] dest;	// @[src/main/pipeline/WBU.scala:29:30]
+  reg [3:0]  rf_we;	// @[src/main/pipeline/WBU.scala:30:30]
+  reg [1:0]  wb_src;	// @[src/main/pipeline/WBU.scala:31:30]
+  reg [31:0] alu_res;	// @[src/main/pipeline/WBU.scala:33:30]
+  reg [31:0] pc;	// @[src/main/pipeline/WBU.scala:34:30]
   reg [31:0] casez_tmp;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
-  always_comb begin	// @[src/main/pipeline/WBU.scala:43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
-    casez (wb_src)	// @[src/main/pipeline/WBU.scala:30:25, :43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+  always_comb begin	// @[src/main/pipeline/WBU.scala:44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+    casez (wb_src)	// @[src/main/pipeline/WBU.scala:31:30, :44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
       2'b00:
-        casez_tmp = 32'h0;	// @[src/main/pipeline/WBU.scala:43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp = 32'h0;	// @[src/main/pipeline/WBU.scala:44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
       2'b01:
-        casez_tmp = alu_res;	// @[src/main/pipeline/WBU.scala:32:26, :43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp = alu_res;	// @[src/main/pipeline/WBU.scala:33:30, :44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
       2'b10:
-        casez_tmp = pc + 32'h4;	// @[src/main/pipeline/WBU.scala:33:21, :43:17, :44:17, :45:{17,36}, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp = pc + 32'h4;	// @[src/main/pipeline/WBU.scala:34:30, :44:17, :45:17, :46:{17,36}, src/main/scala/chisel3/util/Mux.scala:126:16]
       default:
-        casez_tmp = io_data_rdata;	// @[src/main/pipeline/WBU.scala:43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
-    endcase	// @[src/main/pipeline/WBU.scala:30:25, :43:17, :44:17, :45:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp = io_data_rdata;	// @[src/main/pipeline/WBU.scala:44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
+    endcase	// @[src/main/pipeline/WBU.scala:31:30, :44:17, :45:17, :46:17, src/main/scala/chisel3/util/Mux.scala:126:16]
   end // always_comb
   always @(posedge clock) begin	// @[src/main/pipeline/WBU.scala:8:7]
     if (reset) begin	// @[src/main/pipeline/WBU.scala:8:7]
-      dest <= 32'h0;	// @[src/main/pipeline/WBU.scala:28:23]
-      rf_we <= 1'h0;	// @[src/main/pipeline/WBU.scala:29:24]
-      wb_src <= 2'h0;	// @[src/main/pipeline/WBU.scala:30:25]
-      alu_res <= 32'h0;	// @[src/main/pipeline/WBU.scala:32:26]
-      pc <= 32'h0;	// @[src/main/pipeline/WBU.scala:33:21]
+      ws_valid <= 1'h0;	// @[src/main/pipeline/WBU.scala:20:27]
+      dest <= 32'h0;	// @[src/main/pipeline/WBU.scala:29:30]
+      rf_we <= 4'h0;	// @[src/main/pipeline/WBU.scala:30:30]
+      wb_src <= 2'h0;	// @[src/main/pipeline/WBU.scala:31:30]
+      alu_res <= 32'h0;	// @[src/main/pipeline/WBU.scala:33:30]
+      pc <= 32'h0;	// @[src/main/pipeline/WBU.scala:34:30]
     end
-    else if (io_to_ws_valid) begin	// @[src/main/pipeline/WBU.scala:9:16]
-      dest <= {27'h0, io_to_ws_dest};	// @[src/main/pipeline/WBU.scala:28:23, :36:14]
-      rf_we <= io_to_ws_rf_we;	// @[src/main/pipeline/WBU.scala:29:24]
-      wb_src <= io_to_ws_wb_src;	// @[src/main/pipeline/WBU.scala:30:25]
-      alu_res <= io_to_ws_alu_res;	// @[src/main/pipeline/WBU.scala:32:26]
-      pc <= io_to_ws_pc;	// @[src/main/pipeline/WBU.scala:33:21]
+    else begin	// @[src/main/pipeline/WBU.scala:8:7]
+      ws_valid <= io_to_ws_valid;	// @[src/main/pipeline/WBU.scala:20:27]
+      if (io_to_ws_valid) begin	// @[src/main/pipeline/WBU.scala:9:16]
+        dest <= {27'h0, io_to_ws_dest};	// @[src/main/pipeline/WBU.scala:29:30, :37:14]
+        rf_we <= io_to_ws_rf_we;	// @[src/main/pipeline/WBU.scala:30:30]
+        wb_src <= io_to_ws_wb_src;	// @[src/main/pipeline/WBU.scala:31:30]
+        alu_res <= io_to_ws_alu_res;	// @[src/main/pipeline/WBU.scala:33:30]
+        pc <= io_to_ws_pc;	// @[src/main/pipeline/WBU.scala:34:30]
+      end
     end
   end // always @(posedge)
   `ifdef ENABLE_INITIAL_REG_	// @[src/main/pipeline/WBU.scala:8:7]
@@ -603,24 +694,26 @@ module WB_Stage(	// @[src/main/pipeline/WBU.scala:8:7]
         for (logic [2:0] i = 3'h0; i < 3'h5; i += 3'h1) begin
           _RANDOM[i] = `RANDOM;	// @[src/main/pipeline/WBU.scala:8:7]
         end	// @[src/main/pipeline/WBU.scala:8:7]
-        dest = {_RANDOM[3'h0][31:1], _RANDOM[3'h1][0]};	// @[src/main/pipeline/WBU.scala:8:7, :28:23]
-        rf_we = _RANDOM[3'h1][1];	// @[src/main/pipeline/WBU.scala:8:7, :28:23, :29:24]
-        wb_src = _RANDOM[3'h1][3:2];	// @[src/main/pipeline/WBU.scala:8:7, :28:23, :30:25]
-        alu_res = {_RANDOM[3'h2][31:4], _RANDOM[3'h3][3:0]};	// @[src/main/pipeline/WBU.scala:8:7, :32:26]
-        pc = {_RANDOM[3'h3][31:4], _RANDOM[3'h4][3:0]};	// @[src/main/pipeline/WBU.scala:8:7, :32:26, :33:21]
+        ws_valid = _RANDOM[3'h0][0];	// @[src/main/pipeline/WBU.scala:8:7, :20:27]
+        dest = {_RANDOM[3'h0][31:1], _RANDOM[3'h1][0]};	// @[src/main/pipeline/WBU.scala:8:7, :20:27, :29:30]
+        rf_we = _RANDOM[3'h1][4:1];	// @[src/main/pipeline/WBU.scala:8:7, :29:30, :30:30]
+        wb_src = _RANDOM[3'h1][6:5];	// @[src/main/pipeline/WBU.scala:8:7, :29:30, :31:30]
+        alu_res = {_RANDOM[3'h2][31:7], _RANDOM[3'h3][6:0]};	// @[src/main/pipeline/WBU.scala:8:7, :33:30]
+        pc = {_RANDOM[3'h3][31:7], _RANDOM[3'h4][6:0]};	// @[src/main/pipeline/WBU.scala:8:7, :33:30, :34:30]
       `endif // RANDOMIZE_REG_INIT
     end // initial
     `ifdef FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/WBU.scala:8:7]
       `FIRRTL_AFTER_INITIAL	// @[src/main/pipeline/WBU.scala:8:7]
     `endif // FIRRTL_AFTER_INITIAL
   `endif // ENABLE_INITIAL_REG_
-  assign io_debug_wb_pc = pc;	// @[src/main/pipeline/WBU.scala:8:7, :33:21]
-  assign io_debug_wb_rf_we = {4{rf_we}};	// @[src/main/pipeline/WBU.scala:8:7, :29:24, :54:30]
-  assign io_debug_wb_rf_wnum = dest[4:0];	// @[src/main/pipeline/WBU.scala:8:7, :28:23, :55:25]
+  assign io_debug_wb_pc = pc;	// @[src/main/pipeline/WBU.scala:8:7, :34:30]
+  assign io_debug_wb_rf_we = ws_valid ? rf_we : 4'h0;	// @[src/main/pipeline/WBU.scala:8:7, :20:27, :30:30, :55:29]
+  assign io_debug_wb_rf_wnum = dest[4:0];	// @[src/main/pipeline/WBU.scala:8:7, :29:30, :56:25]
   assign io_debug_wb_rf_wdata = casez_tmp;	// @[src/main/pipeline/WBU.scala:8:7, src/main/scala/chisel3/util/Mux.scala:126:16]
-  assign io_rf_we = rf_we;	// @[src/main/pipeline/WBU.scala:8:7, :29:24]
-  assign io_rf_waddr = dest;	// @[src/main/pipeline/WBU.scala:8:7, :28:23]
+  assign io_rf_we = rf_we;	// @[src/main/pipeline/WBU.scala:8:7, :30:30]
+  assign io_rf_waddr = dest;	// @[src/main/pipeline/WBU.scala:8:7, :29:30]
   assign io_rf_wdata = casez_tmp;	// @[src/main/pipeline/WBU.scala:8:7, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_rd_ws = ws_valid ? dest[4:0] : 5'h0;	// @[src/main/pipeline/WBU.scala:8:7, :20:27, :29:30, :59:20]
 endmodule
 
 // VCS coverage exclude_file
@@ -637,6 +730,10 @@ module rf_32x32(	// @[src/main/regfile.scala:22:15]
   input         R2_en,
                 R2_clk,
   output [31:0] R2_data,
+  input  [4:0]  R3_addr,
+  input         R3_en,
+                R3_clk,
+  output [31:0] R3_data,
   input  [4:0]  W0_addr,
   input         W0_en,
                 W0_clk,
@@ -663,17 +760,19 @@ module rf_32x32(	// @[src/main/regfile.scala:22:15]
   assign R0_data = R0_en ? Memory[R0_addr] : 32'bx;	// @[src/main/regfile.scala:22:15]
   assign R1_data = R1_en ? Memory[R1_addr] : 32'bx;	// @[src/main/regfile.scala:22:15]
   assign R2_data = R2_en ? Memory[R2_addr] : 32'bx;	// @[src/main/regfile.scala:22:15]
+  assign R3_data = R3_en ? Memory[R3_addr] : 32'bx;	// @[src/main/regfile.scala:22:15]
 endmodule
 
 module RegFile(	// @[src/main/regfile.scala:8:7]
   input         clock,	// @[src/main/regfile.scala:8:7]
+                reset,	// @[src/main/regfile.scala:8:7]
   input  [4:0]  io_raddr1,	// @[src/main/regfile.scala:9:16]
   output [31:0] io_rdata1,	// @[src/main/regfile.scala:9:16]
   input  [4:0]  io_raddr2,	// @[src/main/regfile.scala:9:16]
   output [31:0] io_rdata2,	// @[src/main/regfile.scala:9:16]
   input  [4:0]  io_raddr3,	// @[src/main/regfile.scala:9:16]
   output [31:0] io_rdata3,	// @[src/main/regfile.scala:9:16]
-  input         io_we,	// @[src/main/regfile.scala:9:16]
+  input  [3:0]  io_we,	// @[src/main/regfile.scala:9:16]
   input  [4:0]  io_waddr,	// @[src/main/regfile.scala:9:16]
   input  [31:0] io_wdata	// @[src/main/regfile.scala:9:16]
 );
@@ -681,27 +780,33 @@ module RegFile(	// @[src/main/regfile.scala:8:7]
   wire [31:0] _rf_ext_R0_data;	// @[src/main/regfile.scala:22:15]
   wire [31:0] _rf_ext_R1_data;	// @[src/main/regfile.scala:22:15]
   wire [31:0] _rf_ext_R2_data;	// @[src/main/regfile.scala:22:15]
+  wire [31:0] _rf_ext_R3_data;	// @[src/main/regfile.scala:22:15]
+  wire [31:0] mask = {{8{io_we[3]}}, {8{io_we[2]}}, {8{io_we[1]}}, {8{io_we[0]}}};	// @[src/main/regfile.scala:24:{17,22,31,41,50,60,69,79,88}]
   rf_32x32 rf_ext (	// @[src/main/regfile.scala:22:15]
-    .R0_addr (io_raddr3),
+    .R0_addr (io_waddr),
     .R0_en   (1'h1),	// @[src/main/regfile.scala:8:7]
     .R0_clk  (clock),
     .R0_data (_rf_ext_R0_data),
-    .R1_addr (io_raddr2),
+    .R1_addr (io_raddr3),
     .R1_en   (1'h1),	// @[src/main/regfile.scala:8:7]
     .R1_clk  (clock),
     .R1_data (_rf_ext_R1_data),
-    .R2_addr (io_raddr1),
+    .R2_addr (io_raddr2),
     .R2_en   (1'h1),	// @[src/main/regfile.scala:8:7]
     .R2_clk  (clock),
     .R2_data (_rf_ext_R2_data),
+    .R3_addr (io_raddr1),
+    .R3_en   (1'h1),	// @[src/main/regfile.scala:8:7]
+    .R3_clk  (clock),
+    .R3_data (_rf_ext_R3_data),
     .W0_addr (io_waddr),
-    .W0_en   (io_we),
+    .W0_en   (|io_we),	// @[src/main/regfile.scala:26:14]
     .W0_clk  (clock),
-    .W0_data (io_wdata)
+    .W0_data (io_wdata & mask | _rf_ext_R0_data & ~mask)	// @[src/main/regfile.scala:22:15, :24:17, :27:{34,42,49,52}]
   );	// @[src/main/regfile.scala:22:15]
-  assign io_rdata1 = io_raddr1 == 5'h0 ? 32'h0 : _rf_ext_R2_data;	// @[src/main/regfile.scala:8:7, :22:15, :31:{19,30}]
-  assign io_rdata2 = io_raddr2 == 5'h0 ? 32'h0 : _rf_ext_R1_data;	// @[src/main/regfile.scala:8:7, :22:15, :31:30, :35:{19,30}]
-  assign io_rdata3 = io_raddr3 == 5'h0 ? 32'h0 : _rf_ext_R0_data;	// @[src/main/regfile.scala:8:7, :22:15, :31:30, :36:{19,30}]
+  assign io_rdata1 = io_raddr1 == 5'h0 ? 32'h0 : _rf_ext_R3_data;	// @[src/main/regfile.scala:8:7, :22:15, :32:{19,30}]
+  assign io_rdata2 = io_raddr2 == 5'h0 ? 32'h0 : _rf_ext_R2_data;	// @[src/main/regfile.scala:8:7, :22:15, :32:30, :36:{19,30}]
+  assign io_rdata3 = io_raddr3 == 5'h0 ? 32'h0 : _rf_ext_R1_data;	// @[src/main/regfile.scala:8:7, :22:15, :32:30, :37:{19,30}]
 endmodule
 
 module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
@@ -726,38 +831,44 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
   wire [31:0] _regfile_io_rdata1;	// @[src/main/cpu_top.scala:18:25]
   wire [31:0] _regfile_io_rdata2;	// @[src/main/cpu_top.scala:18:25]
   wire [31:0] _regfile_io_rdata3;	// @[src/main/cpu_top.scala:18:25]
-  wire        _WBU_io_rf_we;	// @[src/main/cpu_top.scala:17:21]
+  wire [3:0]  _WBU_io_rf_we;	// @[src/main/cpu_top.scala:17:21]
   wire [31:0] _WBU_io_rf_waddr;	// @[src/main/cpu_top.scala:17:21]
   wire [31:0] _WBU_io_rf_wdata;	// @[src/main/cpu_top.scala:17:21]
+  wire [4:0]  _WBU_io_rd_ws;	// @[src/main/cpu_top.scala:17:21]
   wire        _MEM_io_to_ws_valid;	// @[src/main/cpu_top.scala:16:21]
   wire [1:0]  _MEM_io_to_ws_wb_src;	// @[src/main/cpu_top.scala:16:21]
-  wire        _MEM_io_to_ws_rf_we;	// @[src/main/cpu_top.scala:16:21]
+  wire [3:0]  _MEM_io_to_ws_rf_we;	// @[src/main/cpu_top.scala:16:21]
   wire [4:0]  _MEM_io_to_ws_dest;	// @[src/main/cpu_top.scala:16:21]
   wire [31:0] _MEM_io_to_ws_alu_res;	// @[src/main/cpu_top.scala:16:21]
   wire [31:0] _MEM_io_to_ws_pc;	// @[src/main/cpu_top.scala:16:21]
+  wire [4:0]  _MEM_io_rd_ms;	// @[src/main/cpu_top.scala:16:21]
   wire        _EXE_io_to_ms_valid;	// @[src/main/cpu_top.scala:15:21]
   wire [1:0]  _EXE_io_to_ms_wb_src;	// @[src/main/cpu_top.scala:15:21]
-  wire        _EXE_io_to_ms_rf_we;	// @[src/main/cpu_top.scala:15:21]
-  wire        _EXE_io_to_ms_mem_we;	// @[src/main/cpu_top.scala:15:21]
+  wire [3:0]  _EXE_io_to_ms_rf_we;	// @[src/main/cpu_top.scala:15:21]
+  wire        _EXE_io_to_ms_mem_en;	// @[src/main/cpu_top.scala:15:21]
+  wire [3:0]  _EXE_io_to_ms_mem_we;	// @[src/main/cpu_top.scala:15:21]
   wire [4:0]  _EXE_io_to_ms_dest;	// @[src/main/cpu_top.scala:15:21]
   wire [31:0] _EXE_io_to_ms_rd_value;	// @[src/main/cpu_top.scala:15:21]
   wire [31:0] _EXE_io_to_ms_alu_res;	// @[src/main/cpu_top.scala:15:21]
   wire [31:0] _EXE_io_to_ms_pc;	// @[src/main/cpu_top.scala:15:21]
+  wire [4:0]  _EXE_io_rd_es;	// @[src/main/cpu_top.scala:15:21]
   wire        _IDU_io_to_es_valid;	// @[src/main/cpu_top.scala:14:21]
   wire [11:0] _IDU_io_to_es_alu_op;	// @[src/main/cpu_top.scala:14:21]
   wire [31:0] _IDU_io_to_es_src1_data;	// @[src/main/cpu_top.scala:14:21]
   wire [31:0] _IDU_io_to_es_src2_data;	// @[src/main/cpu_top.scala:14:21]
   wire [1:0]  _IDU_io_to_es_wb_src;	// @[src/main/cpu_top.scala:14:21]
-  wire        _IDU_io_to_es_rf_we;	// @[src/main/cpu_top.scala:14:21]
-  wire        _IDU_io_to_es_mem_we;	// @[src/main/cpu_top.scala:14:21]
+  wire [3:0]  _IDU_io_to_es_rf_we;	// @[src/main/cpu_top.scala:14:21]
+  wire        _IDU_io_to_es_mem_en;	// @[src/main/cpu_top.scala:14:21]
+  wire [3:0]  _IDU_io_to_es_mem_we;	// @[src/main/cpu_top.scala:14:21]
   wire [4:0]  _IDU_io_to_es_dest;	// @[src/main/cpu_top.scala:14:21]
   wire [31:0] _IDU_io_to_es_rd_value;	// @[src/main/cpu_top.scala:14:21]
   wire [31:0] _IDU_io_to_es_pc;	// @[src/main/cpu_top.scala:14:21]
+  wire        _IDU_io_ds_allowin;	// @[src/main/cpu_top.scala:14:21]
   wire        _IDU_io_br_taken;	// @[src/main/cpu_top.scala:14:21]
   wire [31:0] _IDU_io_br_target;	// @[src/main/cpu_top.scala:14:21]
-  wire [31:0] _IDU_io_rj;	// @[src/main/cpu_top.scala:14:21]
-  wire [31:0] _IDU_io_rk;	// @[src/main/cpu_top.scala:14:21]
-  wire [31:0] _IDU_io_rd;	// @[src/main/cpu_top.scala:14:21]
+  wire [4:0]  _IDU_io_rj;	// @[src/main/cpu_top.scala:14:21]
+  wire [4:0]  _IDU_io_rk;	// @[src/main/cpu_top.scala:14:21]
+  wire [4:0]  _IDU_io_rd;	// @[src/main/cpu_top.scala:14:21]
   wire        _IFU_io_to_ds_valid;	// @[src/main/cpu_top.scala:13:21]
   wire [31:0] _IFU_io_to_ds_pc;	// @[src/main/cpu_top.scala:13:21]
   wire [31:0] _IFU_io_to_ds_inst;	// @[src/main/cpu_top.scala:13:21]
@@ -771,7 +882,8 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_br_target   (_IDU_io_br_target),	// @[src/main/cpu_top.scala:14:21]
     .io_to_ds_valid (_IFU_io_to_ds_valid),
     .io_to_ds_pc    (_IFU_io_to_ds_pc),
-    .io_to_ds_inst  (_IFU_io_to_ds_inst)
+    .io_to_ds_inst  (_IFU_io_to_ds_inst),
+    .io_ds_allowin  (_IDU_io_ds_allowin)	// @[src/main/cpu_top.scala:14:21]
   );	// @[src/main/cpu_top.scala:13:21]
   ID_Stage IDU (	// @[src/main/cpu_top.scala:14:21]
     .clock              (clock),
@@ -785,10 +897,12 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_to_es_src2_data (_IDU_io_to_es_src2_data),
     .io_to_es_wb_src    (_IDU_io_to_es_wb_src),
     .io_to_es_rf_we     (_IDU_io_to_es_rf_we),
+    .io_to_es_mem_en    (_IDU_io_to_es_mem_en),
     .io_to_es_mem_we    (_IDU_io_to_es_mem_we),
     .io_to_es_dest      (_IDU_io_to_es_dest),
     .io_to_es_rd_value  (_IDU_io_to_es_rd_value),
     .io_to_es_pc        (_IDU_io_to_es_pc),
+    .io_ds_allowin      (_IDU_io_ds_allowin),
     .io_br_taken        (_IDU_io_br_taken),
     .io_br_target       (_IDU_io_br_target),
     .io_rj              (_IDU_io_rj),
@@ -796,7 +910,10 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_rd              (_IDU_io_rd),
     .io_reg_rdata1      (_regfile_io_rdata1),	// @[src/main/cpu_top.scala:18:25]
     .io_reg_rdata2      (_regfile_io_rdata2),	// @[src/main/cpu_top.scala:18:25]
-    .io_reg_rdata3      (_regfile_io_rdata3)	// @[src/main/cpu_top.scala:18:25]
+    .io_reg_rdata3      (_regfile_io_rdata3),	// @[src/main/cpu_top.scala:18:25]
+    .io_rd_es           (_EXE_io_rd_es),	// @[src/main/cpu_top.scala:15:21]
+    .io_rd_ms           (_MEM_io_rd_ms),	// @[src/main/cpu_top.scala:16:21]
+    .io_rd_ws           (_WBU_io_rd_ws)	// @[src/main/cpu_top.scala:17:21]
   );	// @[src/main/cpu_top.scala:14:21]
   EXE_Stage EXE (	// @[src/main/cpu_top.scala:15:21]
     .clock              (clock),
@@ -807,6 +924,7 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_to_es_src2_data (_IDU_io_to_es_src2_data),	// @[src/main/cpu_top.scala:14:21]
     .io_to_es_wb_src    (_IDU_io_to_es_wb_src),	// @[src/main/cpu_top.scala:14:21]
     .io_to_es_rf_we     (_IDU_io_to_es_rf_we),	// @[src/main/cpu_top.scala:14:21]
+    .io_to_es_mem_en    (_IDU_io_to_es_mem_en),	// @[src/main/cpu_top.scala:14:21]
     .io_to_es_mem_we    (_IDU_io_to_es_mem_we),	// @[src/main/cpu_top.scala:14:21]
     .io_to_es_dest      (_IDU_io_to_es_dest),	// @[src/main/cpu_top.scala:14:21]
     .io_to_es_rd_value  (_IDU_io_to_es_rd_value),	// @[src/main/cpu_top.scala:14:21]
@@ -814,11 +932,13 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_to_ms_valid     (_EXE_io_to_ms_valid),
     .io_to_ms_wb_src    (_EXE_io_to_ms_wb_src),
     .io_to_ms_rf_we     (_EXE_io_to_ms_rf_we),
+    .io_to_ms_mem_en    (_EXE_io_to_ms_mem_en),
     .io_to_ms_mem_we    (_EXE_io_to_ms_mem_we),
     .io_to_ms_dest      (_EXE_io_to_ms_dest),
     .io_to_ms_rd_value  (_EXE_io_to_ms_rd_value),
     .io_to_ms_alu_res   (_EXE_io_to_ms_alu_res),
-    .io_to_ms_pc        (_EXE_io_to_ms_pc)
+    .io_to_ms_pc        (_EXE_io_to_ms_pc),
+    .io_rd_es           (_EXE_io_rd_es)
   );	// @[src/main/cpu_top.scala:15:21]
   MEM_Stage MEM (	// @[src/main/cpu_top.scala:16:21]
     .clock             (clock),
@@ -826,6 +946,7 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_to_ms_valid    (_EXE_io_to_ms_valid),	// @[src/main/cpu_top.scala:15:21]
     .io_to_ms_wb_src   (_EXE_io_to_ms_wb_src),	// @[src/main/cpu_top.scala:15:21]
     .io_to_ms_rf_we    (_EXE_io_to_ms_rf_we),	// @[src/main/cpu_top.scala:15:21]
+    .io_to_ms_mem_en   (_EXE_io_to_ms_mem_en),	// @[src/main/cpu_top.scala:15:21]
     .io_to_ms_mem_we   (_EXE_io_to_ms_mem_we),	// @[src/main/cpu_top.scala:15:21]
     .io_to_ms_dest     (_EXE_io_to_ms_dest),	// @[src/main/cpu_top.scala:15:21]
     .io_to_ms_rd_value (_EXE_io_to_ms_rd_value),	// @[src/main/cpu_top.scala:15:21]
@@ -837,9 +958,11 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_to_ws_dest     (_MEM_io_to_ws_dest),
     .io_to_ws_alu_res  (_MEM_io_to_ws_alu_res),
     .io_to_ws_pc       (_MEM_io_to_ws_pc),
+    .io_data_en        (io_data_en),
     .io_data_we        (io_data_we),
     .io_data_addr      (io_data_addr),
-    .io_data_wdata     (io_data_wdata)
+    .io_data_wdata     (io_data_wdata),
+    .io_rd_ms          (_MEM_io_rd_ms)
   );	// @[src/main/cpu_top.scala:16:21]
   WB_Stage WBU (	// @[src/main/cpu_top.scala:17:21]
     .clock                (clock),
@@ -857,22 +980,23 @@ module MYCPU_TOP(	// @[src/main/cpu_top.scala:6:7]
     .io_data_rdata        (io_data_rdata),
     .io_rf_we             (_WBU_io_rf_we),
     .io_rf_waddr          (_WBU_io_rf_waddr),
-    .io_rf_wdata          (_WBU_io_rf_wdata)
+    .io_rf_wdata          (_WBU_io_rf_wdata),
+    .io_rd_ws             (_WBU_io_rd_ws)
   );	// @[src/main/cpu_top.scala:17:21]
   RegFile regfile (	// @[src/main/cpu_top.scala:18:25]
     .clock     (clock),
-    .io_raddr1 (_IDU_io_rj[4:0]),	// @[src/main/cpu_top.scala:14:21, :27:15]
+    .reset     (reset),
+    .io_raddr1 (_IDU_io_rj),	// @[src/main/cpu_top.scala:14:21]
     .io_rdata1 (_regfile_io_rdata1),
-    .io_raddr2 (_IDU_io_rk[4:0]),	// @[src/main/cpu_top.scala:14:21, :28:15]
+    .io_raddr2 (_IDU_io_rk),	// @[src/main/cpu_top.scala:14:21]
     .io_rdata2 (_regfile_io_rdata2),
-    .io_raddr3 (_IDU_io_rd[4:0]),	// @[src/main/cpu_top.scala:14:21, :29:15]
+    .io_raddr3 (_IDU_io_rd),	// @[src/main/cpu_top.scala:14:21]
     .io_rdata3 (_regfile_io_rdata3),
     .io_we     (_WBU_io_rf_we),	// @[src/main/cpu_top.scala:17:21]
-    .io_waddr  (_WBU_io_rf_waddr[4:0]),	// @[src/main/cpu_top.scala:17:21, :44:23]
+    .io_waddr  (_WBU_io_rf_waddr[4:0]),	// @[src/main/cpu_top.scala:17:21, :47:23]
     .io_wdata  (_WBU_io_rf_wdata)	// @[src/main/cpu_top.scala:17:21]
   );	// @[src/main/cpu_top.scala:18:25]
   assign io_inst_we = 4'h0;	// @[src/main/cpu_top.scala:6:7, :13:21]
   assign io_inst_wdata = 32'h0;	// @[src/main/cpu_top.scala:6:7, :13:21]
-  assign io_data_en = 1'h1;	// @[src/main/cpu_top.scala:6:7, :13:21, :14:21, :15:21, :16:21, :17:21]
 endmodule
 

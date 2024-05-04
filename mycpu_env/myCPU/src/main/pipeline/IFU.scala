@@ -24,7 +24,7 @@ class IF_Stage extends Module {
     when (fs_allowin) {
         fs_valid := to_fs_valid
     }
-    io.to_ds.valid := fs_valid & fs_ready_go
+    io.to_ds.valid := fs_valid & fs_ready_go & (!io.br.taken)
 
     val pc     = RegInit("h1bfffffc".asUInt(32.W))
     val seq_pc = Wire(UInt(32.W))
