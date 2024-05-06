@@ -207,22 +207,26 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
       : _decode_T_29 | _decode_T_31
           ? 3'h1
           : _decode_T_33 ? 3'h4 : _decode_T_35 ? 3'h3 : {1'h0, _decode_T_37, 1'h0};	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire [1:0]  decode_2 =
-    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
-    | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23 | _decode_T_25 | _decode_T_122 | _decode_T_29
-      ? 2'h1
-      : {_GEN_0, 1'h0};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   wire        _GEN_2 =
     _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
     | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  wire        _GEN_3 =
+    | _decode_T_23 | _decode_T_25 | _decode_T_122 | _decode_T_29;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire [1:0]  decode_2 = _GEN_2 ? 2'h1 : {_GEN_0, 1'h0};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
+  wire        _GEN_3 = _decode_T_31 | _decode_T_33;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_4 =
+    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
+    | _decode_T_13 | _decode_T_15;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_5 =
     _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
     | _decode_T_13 | _decode_T_15 | _decode_T_17 | _decode_T_19 | _decode_T_21
-    | _decode_T_23 | _decode_T_25;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+    | _decode_T_23;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_6 =
+    _decode_T_17 | _decode_T_19 | _decode_T_21 | _decode_T_23 | _decode_T_25;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  wire        _GEN_7 =
+    _decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9 | _decode_T_11
+    | _decode_T_13 | _decode_T_15 | _GEN_6;	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   wire [3:0]  decode_6 =
-    _GEN_3
+    _GEN_7
       ? 4'hF
       : _decode_T_122
           ? 4'h0
@@ -231,12 +235,31 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
               : _decode_T_31
                   ? 4'h0
                   : _decode_T_33 ? 4'hF : _GEN ? 4'h0 : {4{_decode_T_39}};	// @[src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign ds_ready_go = ~io_rd_es_valid | io_rd_es_ready;	// @[src/main/pipeline/IDU.scala:124:23]
+  reg  [4:0]  casez_tmp;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
+  always_comb begin	// @[src/main/pipeline/IDU.scala:117:19, :118:19, :119:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+    casez (_GEN_4
+             ? 2'h2
+             : _GEN_6
+                 ? 2'h0
+                 : _decode_T_122 ? 2'h3 : _decode_T_29 | _GEN_3 ? 2'h0 : {2{_GEN}})	// @[src/main/pipeline/IDU.scala:9:7, :117:19, :118:19, :119:19, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b00:
+        casez_tmp = 5'h0;	// @[src/main/pipeline/IDU.scala:117:19, :118:19, :119:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b01:
+        casez_tmp = inst[9:5];	// @[src/main/pipeline/IDU.scala:36:23, :44:18, :117:19, :118:19, :119:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      2'b10:
+        casez_tmp = inst[14:10];	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :117:19, :118:19, :119:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+      default:
+        casez_tmp = inst[4:0];	// @[src/main/pipeline/IDU.scala:36:23, :43:18, :117:19, :118:19, :119:19, src/main/scala/chisel3/util/Mux.scala:126:16]
+    endcase	// @[src/main/pipeline/IDU.scala:9:7, :117:19, :118:19, :119:19, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+  end // always_comb
+  assign ds_ready_go =
+    ~(io_rd_es_valid
+      & (io_rd_es_dest == (_GEN_2 | ~_GEN_3 & _GEN ? inst[9:5] : 5'h0)
+         | io_rd_es_dest == casez_tmp)) | io_rd_es_ready;	// @[src/main/pipeline/IDU.scala:36:23, :44:18, :123:{34,52,60,77}, :124:23, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
   wire [31:0] src1_data = decode_2 == 2'h1 ? rj_value : decode_2 == 2'h2 ? pc : 32'h0;	// @[src/main/pipeline/IDU.scala:9:7, :37:23, :128:20, :129:20, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
-  reg  [31:0] casez_tmp;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
+  reg  [31:0] casez_tmp_0;	// @[src/main/scala/chisel3/util/Mux.scala:126:16]
   always_comb begin	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
-    casez (_decode_T_1 | _decode_T_3 | _decode_T_5 | _decode_T_7 | _decode_T_9
-           | _decode_T_11 | _decode_T_13 | _decode_T_15
+    casez (_GEN_4
              ? 3'h1
              : _decode_T_17 | _decode_T_19 | _decode_T_21
                  ? 3'h2
@@ -244,13 +267,11 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
                      ? 3'h3
                      : _decode_T_29
                          ? 3'h4
-                         : _decode_T_31 | _decode_T_33
-                             ? 3'h6
-                             : _GEN ? 3'h4 : _decode_T_39 ? 3'h5 : 3'h0)	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
+                         : _GEN_3 ? 3'h6 : _GEN ? 3'h4 : _decode_T_39 ? 3'h5 : 3'h0)	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b000:
-        casez_tmp = 32'h0;	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = 32'h0;	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b001:
-        casez_tmp =
+        casez_tmp_0 =
           io_rd_es_valid & io_rd_es_dest == inst[14:10]
             ? io_rd_es_data
             : io_rd_ms_valid & io_rd_ms_dest == inst[14:10]
@@ -259,17 +280,17 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
                     ? io_rd_ws_data
                     : io_reg_rdata2;	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :55:{25,42}, :56:{25,42}, :57:{25,42}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b010:
-        casez_tmp = {27'h0, inst[14:10]};	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :73:9, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = {27'h0, inst[14:10]};	// @[src/main/pipeline/IDU.scala:36:23, :45:18, :73:9, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b011:
-        casez_tmp = {{20{inst[21]}}, inst[21:10]};	// @[src/main/pipeline/IDU.scala:36:23, :74:16, :77:{16,21,29}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = {{20{inst[21]}}, inst[21:10]};	// @[src/main/pipeline/IDU.scala:36:23, :74:16, :77:{16,21,29}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b100:
-        casez_tmp = {{14{inst[25]}}, inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :75:16, :78:{16,21,29}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = {{14{inst[25]}}, inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :75:16, :78:{16,21,29}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b101:
-        casez_tmp = {inst[24:5], 12'h0};	// @[src/main/pipeline/IDU.scala:36:23, :76:16, :79:16, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = {inst[24:5], 12'h0};	// @[src/main/pipeline/IDU.scala:36:23, :76:16, :79:16, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       3'b110:
-        casez_tmp = {{4{inst[9]}}, inst[9:0], inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :75:16, :80:{16,21,29,39}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = {{4{inst[9]}}, inst[9:0], inst[25:10], 2'h0};	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :75:16, :80:{16,21,29,39}, :134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
       default:
-        casez_tmp = 32'h0;	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
+        casez_tmp_0 = 32'h0;	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Mux.scala:126:16]
     endcase	// @[src/main/pipeline/IDU.scala:134:20, :135:20, :136:20, :137:20, :138:20, :139:20, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
   end // always_comb
   wire        _io_to_es_dest_T = decode_1 == 3'h4;	// @[src/main/pipeline/IDU.scala:143:37, src/main/scala/chisel3/util/Lookup.scala:34:39]
@@ -341,9 +362,9 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
                                                        ? 4'hF
                                                        : {1'h1, ~_decode_T_39, 2'h3}};	// @[src/main/pipeline/IDU.scala:9:7, :149:21, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   assign io_to_es_src1_data = src1_data;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
-  assign io_to_es_src2_data = casez_tmp;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_to_es_src2_data = casez_tmp_0;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_wb_src =
-    _GEN_2
+    _GEN_5
       ? 2'h1
       : _decode_T_25
           ? 2'h3
@@ -355,8 +376,8 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
                       ? 2'h0
                       : _decode_T_33 ? 2'h2 : _GEN ? 2'h0 : {1'h0, _decode_T_39};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   assign io_to_es_rf_we = decode_6;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:34:39]
-  assign io_to_es_mem_en = ~_GEN_2 & (_decode_T_25 | _decode_T_122);	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
-  assign io_to_es_mem_we = _GEN_3 ? 4'h0 : {4{_decode_T_122}};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_mem_en = ~_GEN_5 & (_decode_T_25 | _decode_T_122);	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
+  assign io_to_es_mem_we = _GEN_7 ? 4'h0 : {4{_decode_T_122}};	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Lookup.scala:31:38, :34:39]
   assign io_to_es_dest = _io_to_es_dest_T ? 5'h1 : (|decode_6) ? inst[4:0] : 5'h0;	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :43:18, :143:37, :159:16, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_rd_value = rd_value;	// @[src/main/pipeline/IDU.scala:9:7, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_to_es_pc = pc;	// @[src/main/pipeline/IDU.scala:9:7, :37:23]
@@ -367,7 +388,7 @@ module ID_Stage(	// @[src/main/pipeline/IDU.scala:9:7]
        | (decode_1 == 3'h2
             ? rj_value != rd_value
             : decode_1 == 3'h3 & rj_value == rd_value));	// @[src/main/pipeline/IDU.scala:9:7, :27:27, :142:23, :143:{17,27,37}, :144:{16,41}, :145:{16,41}, src/main/scala/chisel3/util/Lookup.scala:34:39, src/main/scala/chisel3/util/Mux.scala:126:16]
-  assign io_br_target = src1_data + casez_tmp;	// @[src/main/pipeline/IDU.scala:9:7, :147:31, src/main/scala/chisel3/util/Mux.scala:126:16]
+  assign io_br_target = src1_data + casez_tmp_0;	// @[src/main/pipeline/IDU.scala:9:7, :147:31, src/main/scala/chisel3/util/Mux.scala:126:16]
   assign io_rj = inst[9:5];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :44:18]
   assign io_rk = inst[14:10];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :45:18]
   assign io_rd = inst[4:0];	// @[src/main/pipeline/IDU.scala:9:7, :36:23, :43:18]

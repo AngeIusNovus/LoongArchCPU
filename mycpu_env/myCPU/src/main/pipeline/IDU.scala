@@ -121,7 +121,7 @@ class ID_Stage extends Module {
 
     val need_rd_es = Wire(Bool())
     need_rd_es := io.rd_es.valid && (io.rd_es.dest === rs1 || io.rd_es.dest === rs2)
-    ds_ready_go := Mux(io.rd_es.valid, io.rd_es.ready, true.B)
+    ds_ready_go := Mux(need_rd_es, io.rd_es.ready, true.B)
 
     val src1_data = Wire(UInt(WORD.W))
     src1_data := MuxCase(0.U(WORD.W), Seq(
