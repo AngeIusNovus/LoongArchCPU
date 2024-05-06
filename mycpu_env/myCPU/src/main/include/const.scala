@@ -6,6 +6,7 @@ import chisel3.util._
 object const {
     val WORD = 32
     val REG  = 5
+    val BYTE_LEN = 4
 
     val OP_LEN = 4
     val ALU_X = 15.U(OP_LEN.W)

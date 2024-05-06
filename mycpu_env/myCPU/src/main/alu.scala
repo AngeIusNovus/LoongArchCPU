@@ -28,8 +28,12 @@ class ALU extends Module {
   val opLui  = (io.aluOp === ALU_LU12I)
 
   // Adder/Subtractor logic
+  val aluSrc2 = Wire(UInt(WORD.W))
   val addSubResult = Wire(UInt(WORD.W))
-  val adderResult = Mux(opSub || opSlt || opSltu, io.aluSrc1 - io.aluSrc2, io.aluSrc1 + io.aluSrc2)
+  val adderResult = Wire(UInt(WORD.W))
+
+  aluSrc2 := Mux(opSub || opSlt || opSltu, (~io.aluSrc2) + 1.U(WORD.W), io.aluSrc2)
+  adderResult := io.aluSrc1 + aluSrc2
   addSubResult := adderResult
 
   // Set less than (signed)

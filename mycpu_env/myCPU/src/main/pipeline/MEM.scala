@@ -11,8 +11,8 @@ class MEM_Stage extends Module {
         val to_ws = new WB_BUS()
         val ms_allowin = Output(Bool())
         val ws_allowin = Input(Bool())
-        val data = new RAM_IO()
-        val rd_ms = Output(UInt(REG.W))
+        val data_rdata = Input(UInt(WORD.W))
+        val rd_ms = new TMP_REG()
     })
 
     val ms_valid = RegInit(false.B)
@@ -44,17 +44,22 @@ class MEM_Stage extends Module {
         rd_value := io.to_ms.rd_value
         pc := io.to_ms.pc 
     }
-
-    io.data.en := mem_en
-    io.data.we := mem_we
-    io.data.addr := alu_res
-    io.data.wdata := rd_value
+    
+    val wb_data = Wire(UInt(WORD.W))
+    wb_data := MuxCase(0.U, Seq(
+        (wb_src === WB_ALU) -> alu_res,
+        (wb_src === WB_MEM) -> io.data_rdata,
+        (wb_src === WB_PC) -> (pc + 4.U(WORD.W))
+    ))
 
     io.to_ws.wb_src := wb_src
     io.to_ws.rf_we := rf_we
     io.to_ws.dest := dest
-    io.to_ws.alu_res := alu_res
+    io.to_ws.wb_data := wb_data
     io.to_ws.pc := pc
 
-    io.rd_ms := Mux(ms_valid, dest, 0.U(REG.W))
+    io.rd_ms.valid := (rf_we =/= 0.U(BYTE_LEN.W)) && ms_valid && (dest =/= 0.U(REG.W))
+    io.rd_ms.ready := true.B
+    io.rd_ms.dest  := dest
+    io.rd_ms.data  := wb_data
 }

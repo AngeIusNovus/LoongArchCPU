@@ -19,9 +19,9 @@ class ID_Stage extends Module {
         val reg_rdata1 = Input(UInt(WORD.W))
         val reg_rdata2 = Input(UInt(WORD.W))
         val reg_rdata3 = Input(UInt(WORD.W))
-        val rd_es = Input(UInt(REG.W))
-        val rd_ms = Input(UInt(REG.W))
-        val rd_ws = Input(UInt(REG.W))
+        val rd_es = Flipped(new TMP_REG())
+        val rd_ms = Flipped(new TMP_REG())
+        val rd_ws = Flipped(new TMP_REG())
     })
 
     val ds_valid = RegInit(false.B)
@@ -46,9 +46,21 @@ class ID_Stage extends Module {
     val rj_value = Wire(UInt(WORD.W))
     val rk_value = Wire(UInt(WORD.W))
     val rd_value = Wire(UInt(WORD.W))
-    rj_value := io.reg_rdata1
-    rk_value := io.reg_rdata2
-    rd_value := io.reg_rdata3
+    rj_value := MuxCase(io.reg_rdata1, Seq(
+        (io.rd_es.valid && io.rd_es.dest === io.rj) -> io.rd_es.data,
+        (io.rd_ms.valid && io.rd_ms.dest === io.rj) -> io.rd_ms.data,
+        (io.rd_ws.valid && io.rd_ws.dest === io.rj) -> io.rd_ws.data
+    ))
+    rk_value := MuxCase(io.reg_rdata2, Seq(
+        (io.rd_es.valid && io.rd_es.dest === io.rk) -> io.rd_es.data,
+        (io.rd_ms.valid && io.rd_ms.dest === io.rk) -> io.rd_ms.data,
+        (io.rd_ws.valid && io.rd_ws.dest === io.rk) -> io.rd_ws.data
+    ))
+    rd_value := MuxCase(io.reg_rdata3, Seq(
+        (io.rd_es.valid && io.rd_es.dest === io.rd) -> io.rd_es.data,
+        (io.rd_ms.valid && io.rd_ms.dest === io.rd) -> io.rd_ms.data,
+        (io.rd_ws.valid && io.rd_ws.dest === io.rd) -> io.rd_ws.data
+    ))
 
     val ui5  = Wire(UInt(WORD.W))
     val i12  = Wire(UInt(12.W))
@@ -107,11 +119,9 @@ class ID_Stage extends Module {
         (rs2_type === RS_D) -> io.rd
     ))
 
-    ds_ready_go := MuxCase(true.B, Seq(
-        (io.rd_es =/= 0.U(REG.W) && (rs1 === io.rd_es || rs2 === io.rd_es)) -> false.B,
-        (io.rd_ms =/= 0.U(REG.W) && (rs1 === io.rd_ms || rs2 === io.rd_ms)) -> false.B,
-        (io.rd_ws =/= 0.U(REG.W) && (rs1 === io.rd_ws || rs2 === io.rd_ws)) -> false.B,
-    ))
+    val need_rd_es = Wire(Bool())
+    need_rd_es := io.rd_es.valid && (io.rd_es.dest === rs1 || io.rd_es.dest === rs2)
+    ds_ready_go := Mux(io.rd_es.valid, io.rd_es.ready, true.B)
 
     val src1_data = Wire(UInt(WORD.W))
     src1_data := MuxCase(0.U(WORD.W), Seq(

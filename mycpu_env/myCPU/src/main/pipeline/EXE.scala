@@ -11,7 +11,8 @@ class EXE_Stage extends Module {
         val to_ms = new ME_BUS()
         val es_allowin = Output(Bool())
         val ms_allowin = Input(Bool())
-        val rd_es = Output(UInt(REG.W))
+        val data = new RAM_IO()
+        val rd_es = new TMP_REG()
     })
 
     val es_valid = RegInit(false.B)
@@ -66,5 +67,13 @@ class EXE_Stage extends Module {
     io.to_ms.mem_en   := mem_en
     io.to_ms.mem_we   := mem_we
 
-    io.rd_es := Mux(es_valid, dest, 0.U(REG.W))
+    io.data.en := mem_en
+    io.data.we := Mux(es_valid, mem_we, 0.U(BYTE_LEN.W))
+    io.data.addr := alu_result
+    io.data.wdata := rd_value
+
+    io.rd_es.valid := (rf_we =/= 0.U(REG.W)) && es_valid && (dest =/= 0.U(REG.W))
+    io.rd_es.ready := wb_src =/= WB_MEM
+    io.rd_es.dest  := dest
+    io.rd_es.data  := Mux(wb_src === WB_ALU, alu_result, pc + 4.U(WORD.W))
 }

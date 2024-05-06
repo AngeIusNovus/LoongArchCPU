@@ -33,7 +33,7 @@ class IF_Stage extends Module {
     seq_pc := pc + 4.U
     nxt_pc := Mux(io.br.taken, io.br.target, seq_pc)
 
-    io.inst.we    := 0.U(4.W)
+    io.inst.we    := 0.U(BYTE_LEN.W)
     io.inst.en    := to_fs_valid & fs_allowin
     io.inst.addr  := nxt_pc
     io.inst.wdata := 0.U(WORD.W)

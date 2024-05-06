@@ -36,13 +36,13 @@ class MYCPU_TOP extends Module {
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
     EXE.io.to_ms      <> MEM.io.to_ms
+    EXE.io.data       <> io.data
 
     MEM.io.ws_allowin <> WBU.io.ws_allowin
+    MEM.io.data_rdata <> io.data.rdata
     MEM.io.to_ws      <> WBU.io.to_ws
-    MEM.io.data       <> io.data
 
     WBU.io.debug      <> io.debug
-    WBU.io.data_rdata <> io.data.rdata
     WBU.io.rf_we      <> regfile.io.we
     WBU.io.rf_waddr   <> regfile.io.waddr
     WBU.io.rf_wdata   <> regfile.io.wdata
