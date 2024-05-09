@@ -5,11 +5,12 @@ import chisel3.util._
 
 object const {
     val WORD = 32
+    val LONG = 64
     val REG  = 5
     val BYTE_LEN = 4
 
-    val OP_LEN = 4
-    val ALU_X = 15.U(OP_LEN.W)
+    val OP_LEN = 5
+    val ALU_X = 31.U(OP_LEN.W)
     val ALU_ADD = 0.U(OP_LEN.W)
     val ALU_LD = 0.U(OP_LEN.W)
     val ALU_ST = 0.U(OP_LEN.W)
@@ -24,6 +25,14 @@ object const {
     val ALU_SRL = 9.U(OP_LEN.W)
     val ALU_SRA = 10.U(OP_LEN.W)
     val ALU_LU12I = 11.U(OP_LEN.W)
+    val ALU_MUL = 12.U(OP_LEN.W)
+    val ALU_MULU = 13.U(OP_LEN.W)
+    val ALU_MULH = 14.U(OP_LEN.W)
+    val ALU_MULHU = 15.U(OP_LEN.W)
+    val ALU_DIV = 16.U(OP_LEN.W)
+    val ALU_DIVU = 17.U(OP_LEN.W)
+    val ALU_MOD = 18.U(OP_LEN.W)
+    val ALU_MODU = 19.U(OP_LEN.W)
 
     val BR_LEN = 3
     val BR_X    = 0.U(BR_LEN.W)
@@ -45,6 +54,7 @@ object const {
     val SRC2_si16 = 4.U(SRC2_LEN.W)
     val SRC2_si20 = 5.U(SRC2_LEN.W)
     val SRC2_si26 = 6.U(SRC2_LEN.W)
+    val SRC2_ui12 = 7.U(SRC2_LEN.W)
 
     val MEM_SEL_LEN = 4
     val MEM_WX = 0.U(MEM_SEL_LEN.W)

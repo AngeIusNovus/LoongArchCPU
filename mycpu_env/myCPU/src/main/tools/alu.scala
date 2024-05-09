@@ -4,6 +4,8 @@ import chisel3._
 import chisel3.util._
 import common._
 import common.const._
+//import config._
+import config.CpuConfig._
 
 class ALU extends Module {
   val io = IO(new Bundle {
@@ -26,6 +28,14 @@ class ALU extends Module {
   val opSrl  = (io.aluOp === ALU_SRL)
   val opSra  = (io.aluOp === ALU_SRA)
   val opLui  = (io.aluOp === ALU_LU12I)
+  val opMul  = (io.aluOp === ALU_MUL)
+  val opMulu = (io.aluOp === ALU_MULU)
+  val opMulh = (io.aluOp === ALU_MULH)
+  val opMulhu= (io.aluOp === ALU_MULHU)
+  val opDiv  = (io.aluOp === ALU_DIV)
+  val opDivu = (io.aluOp === ALU_DIVU)
+  val opMod  = (io.aluOp === ALU_MOD)
+  val opModu = (io.aluOp === ALU_MODU)
 
   // Adder/Subtractor logic
   val aluSrc2 = Wire(UInt(WORD.W))
@@ -64,19 +74,55 @@ class ALU extends Module {
   // Load Upper Immediate
   val luiResult = io.aluSrc2
 
+  val div = Module(new Div()).io
+  val mul = Module(new Mul()).io
+
+  val divReady = Wire(Bool())
+  val divisorResult = Wire(UInt(LONG.W))
+  val divResult = Wire(UInt(WORD.W))
+  val modResult = Wire(UInt(WORD.W))
+  div.start := opDiv || opDivu || opMod || opModu
+  div.signed := opDiv || opMod
+  div.src1 := io.aluSrc1
+  div.src2 := io.aluSrc2
+  div.allow_to_go := false.B
+  divReady := div.ready
+  divisorResult := div.result
+  modResult := divisorResult(LONG - 1, WORD)
+  divResult := divisorResult(WORD - 1, 0)
+
+  val mulReady = Wire(Bool())
+  val mulResult = Wire(UInt(LONG.W))
+  val highResult = Wire(UInt(WORD.W))
+  val lowResult = Wire(UInt(WORD.W))
+  mul.start := opMul || opMulh || opMulu || opMulhu
+  mul.signed := opMul || opMulh
+  mul.src1 := io.aluSrc1
+  mul.src2 := io.aluSrc2
+  mul.allow_to_go := false.B
+  mulReady  := mul.ready
+  mulResult := mul.result
+
+  highResult := mulResult(LONG - 1, WORD)
+  lowResult  := mulResult(WORD - 1, 0)
+
   // ALU result selection
   io.aluResult := MuxCase(0.U, Seq(
-    opAdd.orR  -> addSubResult,
-    opSub.orR  -> addSubResult,
-    opSlt.orR  -> sltResult,
-    opSltu.orR -> sltuResult,
-    opAnd.orR  -> andResult,
-    opNor.orR  -> norResult,
-    opOr.orR   -> orResult,
-    opXor.orR  -> xorResult,
-    opSll.orR  -> sllResult,
-    opSrl.orR  -> srlResult,
-    opSra.orR  -> sraResult,
-    opLui.orR  -> luiResult
+    opAdd  -> addSubResult,
+    opSub  -> addSubResult,
+    opSlt  -> sltResult,
+    opSltu -> sltuResult,
+    opAnd  -> andResult,
+    opNor  -> norResult,
+    opOr   -> orResult,
+    opXor  -> xorResult,
+    opSll  -> sllResult,
+    opSrl  -> srlResult,
+    opSra  -> sraResult,
+    opLui  -> luiResult,
+    (opMul || opMulu) -> lowResult,
+    (opMulh || opMulhu) -> highResult,
+    (opDiv || opDivu) -> divResult,
+    (opMod || opModu) -> modResult
   ))
 }

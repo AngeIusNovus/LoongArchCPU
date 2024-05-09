@@ -66,6 +66,7 @@ class ID_Stage extends Module {
     val i12  = Wire(UInt(12.W))
     val i16  = Wire(UInt(16.W))
     val i20  = Wire(UInt(20.W))
+    val ui12 = Wire(UInt(WORD.W))
     val si12 = Wire(UInt(WORD.W))
     val si16 = Wire(UInt(WORD.W))
     val si20 = Wire(UInt(WORD.W))
@@ -74,6 +75,7 @@ class ID_Stage extends Module {
     i12 := inst(21, 10)
     i16 := inst(25, 10)
     i20 := inst(24, 5)
+    ui12 := Cat(0.U(20.W), i12)
     si12 := Cat(Fill(20, i12(11)), i12)
     si16 := Cat(Fill(14, i16(15)), i16, 0.U(2.W))
     si20 := Cat(i20, 0.U(12.W))
@@ -83,26 +85,42 @@ class ID_Stage extends Module {
         List(ALU_X, BR_X, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X), 
         // ALU操作类型，跳转类型，ALU源操作数1类型，ALU源操作数2类型，内存读使能，内存写使能，寄存器写使能，写回来源，源操作数1寄存器，源操作数2寄存器
         Array (
-            add_w   -> List(ALU_ADD,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
-            sub_w   -> List(ALU_SUB,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
-            slt     -> List(ALU_SLT,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
-            sltu    -> List(ALU_SLTU,   BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
-            nor     -> List(ALU_NOR,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K), 
-            or      -> List(ALU_OR,     BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K), 
-            and     -> List(ALU_AND,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K), 
-            xor     -> List(ALU_XOR,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K), 
-            slli_w  -> List(ALU_SLL,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X), 
-            srli_w  -> List(ALU_SRL,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X), 
-            srai_w  -> List(ALU_SRA,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X), 
-            addi_w  -> List(ALU_ADD,    BR_X,   SRC1_REG, SRC2_si12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
-            ld_w    -> List(ALU_LD,     BR_X,   SRC1_REG, SRC2_si12, MEM_RS, MEM_WX, RF_S, WB_MEM, RS_J, RS_X),
-            st_w    -> List(ALU_ST,     BR_X,   SRC1_REG, SRC2_si12, MEM_RS, MEM_WS, RF_X, WB_X,   RS_J, RS_D),
-            jirl    -> List(ALU_X,      BR_S,   SRC1_REG, SRC2_si16, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_J, RS_X),
-            inst_b  -> List(ALU_X,      BR_S,   SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_X, WB_X,   RS_X, RS_X),
-            inst_bl -> List(ALU_X,      BR_BL,  SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_X, RS_X),
-            beq     -> List(ALU_X,      BR_BEQ, SRC1_PC,  SRC2_si16, MEM_RX, MEM_WX, RF_X, WB_X,   RS_J, RS_D),
-            bne     -> List(ALU_X,      BR_BNE, SRC1_PC,  SRC2_si16, MEM_RX, MEM_WX, RF_X, WB_X,   RS_J, RS_D),
-            lu12i_w -> List(ALU_LU12I,  BR_X,   SRC1_X,   SRC2_si20, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X)
+            add_w     -> List(ALU_ADD,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            sub_w     -> List(ALU_SUB,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            slt       -> List(ALU_SLT,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            slti      -> List(ALU_SLT,    BR_X,   SRC1_REG, SRC2_si12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            sltu      -> List(ALU_SLTU,   BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            sltui     -> List(ALU_SLTU,   BR_X,   SRC1_REG, SRC2_si12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            nor       -> List(ALU_NOR,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            or        -> List(ALU_OR,     BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            ori       -> List(ALU_OR,     BR_X,   SRC1_REG, SRC2_ui12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            and       -> List(ALU_AND,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            andi      -> List(ALU_AND,    BR_X,   SRC1_REG, SRC2_ui12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            xor       -> List(ALU_XOR,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            xori      -> List(ALU_XOR,    BR_X,   SRC1_REG, SRC2_ui12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            sll_w     -> List(ALU_SLL,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            slli_w    -> List(ALU_SLL,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            srl_w     -> List(ALU_SRL,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            srli_w    -> List(ALU_SRL,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            sra_w     -> List(ALU_SRA,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            srai_w    -> List(ALU_SRA,    BR_X,   SRC1_REG, SRC2_ui5,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            addi_w    -> List(ALU_ADD,    BR_X,   SRC1_REG, SRC2_si12, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_X),
+            ld_w      -> List(ALU_LD,     BR_X,   SRC1_REG, SRC2_si12, MEM_RS, MEM_WX, RF_S, WB_MEM, RS_J, RS_X),
+            st_w      -> List(ALU_ST,     BR_X,   SRC1_REG, SRC2_si12, MEM_RS, MEM_WS, RF_X, WB_X,   RS_J, RS_D),
+            jirl      -> List(ALU_X,      BR_S,   SRC1_REG, SRC2_si16, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_J, RS_X),
+            inst_b    -> List(ALU_X,      BR_S,   SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_X, WB_X,   RS_X, RS_X),
+            inst_bl   -> List(ALU_X,      BR_BL,  SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_X, RS_X),
+            beq       -> List(ALU_X,      BR_BEQ, SRC1_PC,  SRC2_si16, MEM_RX, MEM_WX, RF_X, WB_X,   RS_J, RS_D),
+            bne       -> List(ALU_X,      BR_BNE, SRC1_PC,  SRC2_si16, MEM_RX, MEM_WX, RF_X, WB_X,   RS_J, RS_D),
+            lu12i_w   -> List(ALU_LU12I,  BR_X,   SRC1_X,   SRC2_si20, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X),
+            pcaddu12i -> List(ALU_ADD,    BR_X,   SRC1_PC,  SRC2_si20, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X),
+            mul_w     -> List(ALU_MUL,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            mulh_w    -> List(ALU_MULH,   BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            mulh_wu   -> List(ALU_MULHU,  BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            div_w     -> List(ALU_DIV,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            div_wu    -> List(ALU_DIVU,   BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            mod_w     -> List(ALU_MOD,    BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
+            mod_wu    -> List(ALU_MODU,   BR_X,   SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K)
         ))
     val alu_op :: br_op :: src1_type :: src2_type :: mem_en :: mem_we :: rf_we :: wb_src :: rs1_type :: rs2_type :: Nil = decode
 
@@ -133,6 +151,7 @@ class ID_Stage extends Module {
     src2_data := MuxCase(0.U(WORD.W), Seq(
         (src2_type === SRC2_REG)  -> rk_value,
         (src2_type === SRC2_ui5)  -> ui5,
+        (src2_type === SRC2_ui12) -> ui12,
         (src2_type === SRC2_si12) -> si12,
         (src2_type === SRC2_si16) -> si16,
         (src2_type === SRC2_si20) -> si20,
