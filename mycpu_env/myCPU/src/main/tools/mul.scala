@@ -55,13 +55,13 @@ class Mul() extends Module {
         io.allow_to_go          -> 0.U
       ))
 
-    val signed   = Wire(UInt(LONG.W))
-    val unsigned = Wire(UInt(LONG.W))
+    val signed   = RegInit(0.U(LONG.W))
+    val unsigned = RegInit(0.U(LONG.W))
     
       signed   := (io.src1.asSInt * io.src2.asSInt).asUInt
       unsigned := io.src1 * io.src2
     
     io.result := Mux(io.signed, signed, unsigned)
-    io.ready  := true.B
+    io.ready  := cnt >= cpuMulClkNum
   }
 }

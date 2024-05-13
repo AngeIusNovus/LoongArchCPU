@@ -121,7 +121,7 @@ class Div() extends Module {
     val ures = Cat(udiv.m_axis_dout_tdata(WORD - 1, 0), udiv.m_axis_dout_tdata(LONG - 1, WORD))
     io.result := Mux(io.signed, sres, ures)
   } else {
-    val cnt = RegInit(0.U(3.W))
+    val cnt = RegInit(0.U(4.W))
     cnt := MuxCase(
       cnt,
       Seq(
@@ -144,13 +144,13 @@ class Div() extends Module {
     val quotient_abs  = dividend_abs / divisor_abs
     val remainder_abs = dividend_abs - quotient_abs * divisor_abs
 
-    val quotient  = Wire(SInt(WORD.W))
-    val remainder = Wire(SInt(WORD.W))
+    val quotient  = RegInit(0.S(WORD.W))
+    val remainder = RegInit(0.S(WORD.W))
 
       quotient  := Mux(quotient_signed, (-quotient_abs).asSInt, quotient_abs.asSInt)
       remainder := Mux(remainder_signed, (-remainder_abs).asSInt, remainder_abs.asSInt)
       
-    io.ready  := true.B
+    io.ready  := cnt >= cpuDivClkNum
     io.result := Cat(remainder, quotient)
   }
 }

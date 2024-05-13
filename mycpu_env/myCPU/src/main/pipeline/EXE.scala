@@ -18,7 +18,6 @@ class EXE_Stage extends Module {
     val es_valid = RegInit(false.B)
     val es_ready_go = Wire(Bool())
 
-    es_ready_go := true.B
     io.es_allowin := (!es_valid) | (io.ms_allowin & es_ready_go)
     when (io.es_allowin) {
         es_valid := io.to_es.valid
@@ -29,8 +28,8 @@ class EXE_Stage extends Module {
     val alu_op      = RegInit(0.U(OP_LEN.W))
     val src1_data   = RegInit(0.U(WORD.W))
     val src2_data   = RegInit(0.U(WORD.W))
-    val mem_en      = RegInit(false.B)
-    val mem_we      = RegInit(0.U(MEM_SEL_LEN.W))
+    val mem_re      = RegInit(0.U(BYTE_LEN.W))
+    val mem_we      = RegInit(0.U(BYTE_LEN.W))
     val rf_we       = RegInit(0.U(RF_SEL_LEN.W))
     val wb_src      = RegInit(0.U(WB_SEL_LEN.W))
     val pc          = RegInit(0.U(WORD.W))
@@ -41,7 +40,7 @@ class EXE_Stage extends Module {
         alu_op      := io.to_es.alu_op
         src1_data   := io.to_es.src1_data
         src2_data   := io.to_es.src2_data
-        mem_en      := io.to_es.mem_en
+        mem_re      := io.to_es.mem_re
         mem_we      := io.to_es.mem_we
         rf_we       := io.to_es.rf_we
         wb_src      := io.to_es.wb_src
@@ -56,7 +55,8 @@ class EXE_Stage extends Module {
     u_alu.io.aluSrc1 := src1_data
     u_alu.io.aluSrc2 := src2_data
     alu_result       := u_alu.io.aluResult
-
+    es_ready_go      := u_alu.io.ready
+    
     io.to_ms.wb_src   := wb_src
     io.to_ms.rf_we    := rf_we
     io.to_ms.dest     := dest
@@ -64,13 +64,26 @@ class EXE_Stage extends Module {
     io.to_ms.dest     := dest
     io.to_ms.alu_res  := alu_result
     io.to_ms.pc       := pc
-    io.to_ms.mem_en   := mem_en
+    io.to_ms.mem_re   := mem_re
     io.to_ms.mem_we   := mem_we
+    io.to_ms.addr     := alu_result
 
-    io.data.en := mem_en
-    io.data.we := Mux(es_valid, mem_we, 0.U(BYTE_LEN.W))
+    val final_we = Wire(UInt(BYTE_LEN.W))
+    val off = alu_result(1, 0)
+
+    final_we := MuxCase(mem_we, Seq(
+        (off === 1.U(2.W)) -> Cat(mem_we(2, 0), mem_we(3)),
+        (off === 2.U(2.W)) -> Cat(mem_we(1, 0), mem_we(3, 2)),
+        (off === 3.U(2.W)) -> Cat(mem_we(0), mem_we(3, 1))
+    ))
+
+    io.data.en := (mem_re =/= 0.U(BYTE_LEN.W))
+    io.data.we := Mux(es_valid, final_we, 0.U(BYTE_LEN.W))
     io.data.addr := alu_result
-    io.data.wdata := rd_value
+    io.data.wdata := MuxCase(rd_value, Seq(
+        (mem_we === MEM_WB) -> Fill(4, rd_value(7, 0)),
+        (mem_we === MEM_WH) -> Fill(2, rd_value(15, 0))
+    ))
 
     io.rd_es.valid := (rf_we =/= 0.U(REG.W)) && es_valid && (dest =/= 0.U(REG.W))
     io.rd_es.ready := wb_src =/= WB_MEM

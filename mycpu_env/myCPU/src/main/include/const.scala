@@ -34,12 +34,16 @@ object const {
     val ALU_MOD = 18.U(OP_LEN.W)
     val ALU_MODU = 19.U(OP_LEN.W)
 
-    val BR_LEN = 3
+    val BR_LEN = 4
     val BR_X    = 0.U(BR_LEN.W)
     val BR_S    = 1.U(BR_LEN.W)
     val BR_BNE  = 2.U(BR_LEN.W)
     val BR_BEQ  = 3.U(BR_LEN.W)
     val BR_BL   = 4.U(BR_LEN.W)
+    val BR_BLT  = 5.U(BR_LEN.W)
+    val BR_BLTU = 6.U(BR_LEN.W)
+    val BR_BGE  = 7.U(BR_LEN.W)
+    val BR_BGEU = 8.U(BR_LEN.W)
 
     val SRC1_LEN = 2
     val SRC1_X   = 0.U(SRC1_LEN.W)
@@ -56,12 +60,18 @@ object const {
     val SRC2_si26 = 6.U(SRC2_LEN.W)
     val SRC2_ui12 = 7.U(SRC2_LEN.W)
 
-    val MEM_SEL_LEN = 4
-    val MEM_WX = 0.U(MEM_SEL_LEN.W)
-    val MEM_WS = 15.U(MEM_SEL_LEN.W)
+    val MEM_WX = 0.U(BYTE_LEN.W)
+    val MEM_WS = 15.U(BYTE_LEN.W)
+    val MEM_WB = 1.U(BYTE_LEN.W)
+    val MEM_WH = 3.U(BYTE_LEN.W)
 
-    val MEM_RX = false.B
-    val MEM_RS = true.B
+    val MEM_RED_LEN = 3
+    val MEM_RX  = 0.U(BYTE_LEN.W)
+    val MEM_RS  = 1.U(BYTE_LEN.W)
+    val MEM_RB  = 2.U(BYTE_LEN.W)
+    val MEM_RH  = 3.U(BYTE_LEN.W)
+    val MEM_RBU = 4.U(BYTE_LEN.W)
+    val MEM_RHU = 5.U(BYTE_LEN.W)
 
     val RF_SEL_LEN = 4
     val RF_X = 0.U(RF_SEL_LEN.W)
