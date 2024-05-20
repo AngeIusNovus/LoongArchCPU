@@ -35,12 +35,7 @@ class ID_Stage extends Module {
     }
     io.to_es.valid := ds_valid && ds_ready_go && !io.es_flush
 
-    val inst = RegInit(0.U(WORD.W))
-    val pc   = RegInit(0.U(WORD.W))
-    when (io.ds_allowin && io.to_ds.valid) {
-        inst := io.to_ds.inst
-        pc   := io.to_ds.pc
-    }
+    val ds = RegEnable(io.to_ds, io.ds_allowin && io.to_ds.valid)
 
     def get_reg(dest : UInt, init : UInt) : UInt = {
         return MuxCase(init, Seq(
@@ -49,9 +44,9 @@ class ID_Stage extends Module {
             (io.rd_ws.valid && io.rd_ws.dest === dest) -> io.rd_ws.data
         ))
     }
-    io.rd := inst(4, 0)
-    io.rj := inst(9, 5)
-    io.rk := inst(14, 10)
+    io.rd := ds.inst(4, 0)
+    io.rj := ds.inst(9, 5)
+    io.rk := ds.inst(14, 10)
     val rj_value = Wire(UInt(WORD.W))
     val rk_value = Wire(UInt(WORD.W))
     val rd_value = Wire(UInt(WORD.W))
@@ -69,18 +64,18 @@ class ID_Stage extends Module {
     val si20 = Wire(UInt(WORD.W))
     val si26 = Wire(UInt(WORD.W))
     val rc = Wire(UInt(CSR_ADDR.W))
-    rc  := inst(23, 10)
-    ui5 := inst(14, 10)
-    i12 := inst(21, 10)
-    i16 := inst(25, 10)
-    i20 := inst(24, 5)
+    rc  := ds.inst(23, 10)
+    ui5 := ds.inst(14, 10)
+    i12 := ds.inst(21, 10)
+    i16 := ds.inst(25, 10)
+    i20 := ds.inst(24, 5)
     ui12 := Cat(0.U(20.W), i12)
     si12 := Cat(Fill(20, i12(11)), i12)
     si16 := Cat(Fill(14, i16(15)), i16, 0.U(2.W))
     si20 := Cat(i20, 0.U(12.W))
-    si26 := Cat(Fill(4, inst(9)), inst(9, 0), inst(25, 10), 0.U(2.W))
+    si26 := Cat(Fill(4, ds.inst(9)), ds.inst(9, 0), ds.inst(25, 10), 0.U(2.W))
 
-    val decode = ListLookup(inst, 
+    val decode = ListLookup(ds.inst, 
         List(ALU_X, BR_X, CSR_X, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X), 
         // ALU操作类型，跳转类型，异常类型，ALU源操作数1类型，ALU源操作数2类型，内存读使能，内存写使能，寄存器写使能，写回来源，源操作数1寄存器，源操作数2寄存器
         Array (
@@ -165,7 +160,7 @@ class ID_Stage extends Module {
     val src1_data = Wire(UInt(WORD.W))
     src1_data := MuxCase(0.U(WORD.W), Seq(
         (src1_type === SRC1_REG) -> rj_value,
-        (src1_type === SRC1_PC)  -> pc
+        (src1_type === SRC1_PC)  -> ds.pc
     ))
 
     val src2_data = Wire(UInt(WORD.W))
@@ -200,7 +195,7 @@ class ID_Stage extends Module {
     io.to_es.csr.Esubcode := MuxCase(0.U(ESUBCODE_LEN.W), Seq(
         (csr_op === CSR_SYSCALL) -> 0.U(ESUBCODE_LEN.W)
     ))
-    io.to_es.csr.pc := pc
+    io.to_es.csr.pc := ds.pc
     io.to_es.csr.en_mask := (csr_op === CSR_XCHG)
     io.to_es.csr.we := (wb_src === WB_BOTH)
     io.to_es.csr.waddr := rc
@@ -222,5 +217,5 @@ class ID_Stage extends Module {
         (br_op === BR_BL) -> 1.U(REG.W),
         (rf_we =/= 0.U(RF_SEL_LEN.W)) -> io.rd
     ))
-    io.to_es.pc := pc
+    io.to_es.pc := ds.pc
 }
