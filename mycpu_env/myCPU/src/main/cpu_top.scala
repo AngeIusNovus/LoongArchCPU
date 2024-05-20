@@ -16,11 +16,15 @@ class MYCPU_TOP extends Module {
     val MEM = Module(new MEM_Stage())
     val WBU = Module(new WB_Stage())
     val regfile = Module(new RegFile())
+    val csrfile = Module(new CsrFile())
 
     IFU.io.inst <> io.inst
     IFU.io.to_ds <> IDU.io.to_ds
     IFU.io.br <> IDU.io.br
     IFU.io.ds_allowin <> IDU.io.ds_allowin
+    IFU.io.csr_taken  <> csrfile.io.csr_taken
+    IFU.io.csr_target <> csrfile.io.csr_target
+    IFU.io.ds_flush   <> IDU.io.ds_flush
 
     IDU.io.es_allowin <> EXE.io.es_allowin
     IDU.io.to_es <> EXE.io.to_es
@@ -33,10 +37,12 @@ class MYCPU_TOP extends Module {
     IDU.io.rd_es <> EXE.io.rd_es
     IDU.io.rd_ms <> MEM.io.rd_ms
     IDU.io.rd_ws <> WBU.io.rd_ws
+    IDU.io.es_flush <> EXE.io.es_flush
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
     EXE.io.to_ms      <> MEM.io.to_ms
     EXE.io.data       <> io.data
+    EXE.io.csr        <> csrfile.io.csr
 
     MEM.io.ws_allowin <> WBU.io.ws_allowin
     MEM.io.data_rdata <> io.data.rdata

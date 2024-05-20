@@ -7,6 +7,7 @@ object const {
     val WORD = 32
     val LONG = 64
     val REG  = 5
+    val CSR_ADDR = 14
     val BYTE_LEN = 4
 
     val OP_LEN = 5
@@ -45,6 +46,14 @@ object const {
     val BR_BGE  = 7.U(BR_LEN.W)
     val BR_BGEU = 8.U(BR_LEN.W)
 
+    val CSR_LEN = 3
+    val CSR_X       = 0.U(CSR_LEN.W)
+    val CSR_RD      = 1.U(CSR_LEN.W)
+    val CSR_WR      = 2.U(CSR_LEN.W)
+    val CSR_XCHG    = 3.U(CSR_LEN.W)
+    val CSR_ERTN    = 4.U(CSR_LEN.W)
+    val CSR_SYSCALL = 5.U(CSR_LEN.W)
+
     val SRC1_LEN = 2
     val SRC1_X   = 0.U(SRC1_LEN.W)
     val SRC1_REG = 1.U(SRC1_LEN.W)
@@ -77,15 +86,42 @@ object const {
     val RF_X = 0.U(RF_SEL_LEN.W)
     val RF_S = 15.U(RF_SEL_LEN.W)
 
-    val WB_SEL_LEN = 2
+    val WB_SEL_LEN = 3
     val WB_X    = 0.U(WB_SEL_LEN.W)
     val WB_ALU  = 1.U(WB_SEL_LEN.W)
     val WB_PC   = 2.U(WB_SEL_LEN.W)
     val WB_MEM  = 3.U(WB_SEL_LEN.W)
+    val WB_CSR  = 4.U(WB_SEL_LEN.W)
+    val WB_BOTH = 5.U(WB_SEL_LEN.W)
 
     val RS_LEN = 2
     val RS_X = 0.U(RS_LEN.W)
     val RS_J = 1.U(RS_LEN.W)
     val RS_K = 2.U(RS_LEN.W)
     val RS_D = 3.U(RS_LEN.W)
+
+    val EXCP_LEN = 2
+    val ECODE_LEN = 6
+    val ESUBCODE_LEN = 9
+
+    val CSR_WIDTH = 4
+    val CSR_BADADDR = 15.U(CSR_WIDTH.W)
+    val CRMD = 0.U(CSR_WIDTH.W)
+    val CRMD_X = "h0".U
+    val PRMD = 1.U(CSR_WIDTH.W)
+    val PRMD_X = "h1".U
+    val ESTAT = 2.U(CSR_WIDTH.W)
+    val ESTAT_X = "h5".U
+    val ERA = 3.U(CSR_WIDTH.W)
+    val ERA_X = "h6".U
+    val EENTRY = 4.U(CSR_WIDTH.W)
+    val EENTRY_X = "hc".U
+    val SAVE0 = 5.U(CSR_WIDTH.W)
+    val SAVE0_X = "h30".U
+    val SAVE1 = 6.U(CSR_WIDTH.W)
+    val SAVE1_X = "h31".U
+    val SAVE2 = 7.U(CSR_WIDTH.W)
+    val SAVE2_X = "h32".U
+    val SAVE3 = 8.U(CSR_WIDTH.W)
+    val SAVE3_X = "h33".U
 }
