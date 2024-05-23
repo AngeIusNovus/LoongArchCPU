@@ -24,7 +24,7 @@ class EXE_Stage extends Module {
     when (io.es_allowin) {
         es_valid := io.to_es.valid
     }
-    io.to_ms.valid := es_valid & es_ready_go
+    io.to_ms.valid := es_valid && es_ready_go && !io.es_flush 
 
     val es = RegEnable(io.to_es, io.es_allowin && io.to_es.valid)
     val csr = RegEnable(io.to_es.csr, io.es_allowin && io.to_es.valid)
@@ -50,10 +50,18 @@ class EXE_Stage extends Module {
     io.to_ms.addr     := alu_result
     io.to_ms.csr_data := io.csr.rdata
 
-    io.es_flush     := es_valid && (csr.Excp =/= 0.U(EXCP_LEN.W))
-    io.csr.Excp     := csr.Excp & Fill(2, es_valid.asUInt)
-    io.csr.Ecode    := csr.Ecode
+    val ALE = ((es.mem_re === MEM_RS) && (alu_result(1, 0) =/= 0.U(2.W))) ||
+              (((es.mem_re === MEM_RH) || (es.mem_re === MEM_RHU)) && (alu_result(0) =/= 0.U(1.W))) ||
+              ((es.mem_we === MEM_WS) && (alu_result(1, 0) =/= 0.U(2.W))) ||
+              ((es.mem_we === MEM_WH) && (alu_result(0) =/= 0.U(1.W)))
+
+    io.es_flush     := es_valid && (io.csr.Excp =/= 0.U(EXCP_LEN.W))
+    io.csr.Excp     := Mux(csr.Excp === 0.U(EXCP_LEN.W), Cat(0.U(1.W), ALE), 
+                                                         csr.Excp) & Fill(2, es_valid.asUInt)
+    io.csr.Ecode    := Mux(ALE && (csr.Ecode === Ecode.NONE), Ecode.ALE, csr.Ecode)
     io.csr.Esubcode := csr.Esubcode
+    io.csr.badv     := csr.badv || ALE
+    io.csr.badvaddr  := Mux((io.csr.Ecode === Ecode.ALE), alu_result, csr.badvaddr)
     io.csr.pc       := csr.pc
     io.csr.en_mask  := csr.en_mask
     io.csr.we       := csr.we
@@ -71,7 +79,7 @@ class EXE_Stage extends Module {
         (off === 3.U(2.W)) -> Cat(es.mem_we(0), es.mem_we(3, 1))
     ))
 
-    io.data.en := (es.mem_re =/= 0.U(BYTE_LEN.W))
+    io.data.en := (es.mem_re =/= 0.U(BYTE_LEN.W)) && (!ALE)
     io.data.we := Mux(!es_valid || (csr.Excp =/= 0.U(EXCP_LEN.W)), 0.U(BYTE_LEN.W), final_we)
     io.data.addr := alu_result
     io.data.wdata := MuxCase(es.rd_value, Seq(

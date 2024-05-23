@@ -24,6 +24,10 @@ class ID_Stage extends Module {
         val rd_ws = Flipped(new TMP_REG())
         val ds_flush = Output(Bool())
         val es_flush = Input(Bool())
+        val en_INT = Input(Bool())
+        val EcounterL  = Input(UInt(WORD.W))
+        val EcounterH  = Input(UInt(WORD.W))
+        val EcounterID = Input(UInt(WORD.W))
     })
 
     val ds_valid = RegInit(false.B)
@@ -63,7 +67,7 @@ class ID_Stage extends Module {
     val si16 = Wire(UInt(WORD.W))
     val si20 = Wire(UInt(WORD.W))
     val si26 = Wire(UInt(WORD.W))
-    val rc = Wire(UInt(CSR_ADDR.W))
+    val rc   = Wire(UInt(CSR_ADDR.W))
     rc  := ds.inst(23, 10)
     ui5 := ds.inst(14, 10)
     i12 := ds.inst(21, 10)
@@ -76,7 +80,7 @@ class ID_Stage extends Module {
     si26 := Cat(Fill(4, ds.inst(9)), ds.inst(9, 0), ds.inst(25, 10), 0.U(2.W))
 
     val decode = ListLookup(ds.inst, 
-        List(ALU_X, BR_X, CSR_X, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X), 
+        List(ALU_X, BR_X, CSR_INE, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X), 
         // ALU操作类型，跳转类型，异常类型，ALU源操作数1类型，ALU源操作数2类型，内存读使能，内存写使能，寄存器写使能，写回来源，源操作数1寄存器，源操作数2寄存器
         Array (
             add_w     -> List(ALU_ADD,    BR_X,    CSR_X, SRC1_REG, SRC2_REG,  MEM_RX, MEM_WX, RF_S, WB_ALU, RS_J, RS_K),
@@ -104,9 +108,9 @@ class ID_Stage extends Module {
             ld_w      -> List(ALU_LD,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RS, MEM_WX, RF_S, WB_MEM, RS_J, RS_X),
             ld_bu     -> List(ALU_LD,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RBU,MEM_WX, RF_S, WB_MEM, RS_J, RS_X),
             ld_hu     -> List(ALU_LD,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RHU,MEM_WX, RF_S, WB_MEM, RS_J, RS_X),
-            st_b      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RS, MEM_WB, RF_X, WB_X,   RS_J, RS_D),
-            st_h      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RS, MEM_WH, RF_X, WB_X,   RS_J, RS_D),
-            st_w      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RS, MEM_WS, RF_X, WB_X,   RS_J, RS_D),
+            st_b      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RB, MEM_WB, RF_X, WB_X,   RS_J, RS_D),
+            st_h      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RB, MEM_WH, RF_X, WB_X,   RS_J, RS_D),
+            st_w      -> List(ALU_ST,     BR_X,    CSR_X, SRC1_REG, SRC2_si12, MEM_RB, MEM_WS, RF_X, WB_X,   RS_J, RS_D),
             jirl      -> List(ALU_X,      BR_S,    CSR_X, SRC1_REG, SRC2_si16, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_J, RS_X),
             inst_b    -> List(ALU_X,      BR_S,    CSR_X, SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_X, WB_X,   RS_X, RS_X),
             inst_bl   -> List(ALU_X,      BR_BL,   CSR_X, SRC1_PC,  SRC2_si26, MEM_RX, MEM_WX, RF_S, WB_PC,  RS_X, RS_X),
@@ -129,7 +133,11 @@ class ID_Stage extends Module {
             csrwr     -> List(ALU_X,      BR_X,    CSR_WR, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_S, WB_BOTH, RS_X, RS_X),
             csrxchg   -> List(ALU_X,      BR_X,    CSR_XCHG, SRC1_REG, SRC2_X, MEM_RX, MEM_WX, RF_S, WB_BOTH, RS_J, RS_X),
             syscall   -> List(ALU_X,      BR_X,    CSR_SYSCALL, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X),
-            ertn      -> List(ALU_X,      BR_X,    CSR_ERTN, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X)
+            ertn      -> List(ALU_X,      BR_X,    CSR_ERTN, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X),
+            break     -> List(ALU_X,      BR_X,    CSR_BREAK, SRC1_X, SRC2_X, MEM_RX, MEM_WX, RF_X, WB_X, RS_X, RS_X),
+            rdcntvl   -> List(ALU_ADD,    BR_X,    CSR_X, SRC1_X, SRC2_CNTL, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X),
+            rdcntvh   -> List(ALU_ADD,    BR_X,    CSR_X, SRC1_X, SRC2_CNTH, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X),
+            rdcntid   -> List(ALU_ADD,    BR_X,    CSR_X, SRC1_X, SRC2_CNTID, MEM_RX, MEM_WX, RF_S, WB_ALU, RS_X, RS_X)
         ))
     val alu_op :: br_op :: csr_op :: src1_type :: src2_type :: mem_en :: mem_we :: rf_we :: wb_src :: rs1_type :: rs2_type :: Nil = decode
 
@@ -171,7 +179,10 @@ class ID_Stage extends Module {
         (src2_type === SRC2_si12) -> si12,
         (src2_type === SRC2_si16) -> si16,
         (src2_type === SRC2_si20) -> si20,
-        (src2_type === SRC2_si26) -> si26
+        (src2_type === SRC2_si26) -> si26,
+        (src2_type === SRC2_CNTL) -> io.EcounterL,
+        (src2_type === SRC2_CNTH) -> io.EcounterH,
+        (src2_type === SRC2_CNTID) -> io.EcounterID
     ))
     
     io.br.taken := ds_valid && MuxCase(false.B, Seq(
@@ -186,18 +197,22 @@ class ID_Stage extends Module {
     io.br.target := src1_data + src2_data
 
     io.to_es.csr.Excp := MuxCase(0.U(EXCP_LEN.W), Seq(
-        (csr_op === CSR_SYSCALL) -> 1.U(EXCP_LEN.W),
-        (csr_op === CSR_ERTN)    -> 2.U(EXCP_LEN.W)
+        (io.to_es.csr.Ecode =/= Ecode.NONE) -> 1.U(EXCP_LEN.W),
+        (csr_op === CSR_ERTN)               -> 2.U(EXCP_LEN.W)
     ))
-    io.to_es.csr.Ecode := MuxCase(0.U(ECODE_LEN.W), Seq(
-        (csr_op === CSR_SYSCALL) -> "hb".U(ECODE_LEN.W)
+    io.to_es.csr.Ecode := MuxCase(Ecode.NONE, Seq(
+        (io.en_INT)              -> Ecode.INT,
+        (ds.ADEF)                -> Ecode.ADEF,
+        (csr_op === CSR_SYSCALL) -> Ecode.SYS,
+        (csr_op === CSR_INE)     -> Ecode.INE,
+        (csr_op === CSR_BREAK)   -> Ecode.BRK
     ))
-    io.to_es.csr.Esubcode := MuxCase(0.U(ESUBCODE_LEN.W), Seq(
-        (csr_op === CSR_SYSCALL) -> 0.U(ESUBCODE_LEN.W)
-    ))
+    io.to_es.csr.Esubcode := false.B
+    io.to_es.csr.badv := ds.ADEF
+    io.to_es.csr.badvaddr := Mux(ds.ADEF, ds.pc, 0.U(WORD.W))
     io.to_es.csr.pc := ds.pc
     io.to_es.csr.en_mask := (csr_op === CSR_XCHG)
-    io.to_es.csr.we := (wb_src === WB_BOTH)
+    io.to_es.csr.we := (wb_src === WB_BOTH) && (io.to_es.csr.Excp === 0.U(EXCP_LEN.W))
     io.to_es.csr.waddr := rc
     io.to_es.csr.wdata := rd_value
     io.to_es.csr.mask := rj_value
@@ -215,6 +230,7 @@ class ID_Stage extends Module {
     io.to_es.rd_value := rd_value
     io.to_es.dest := MuxCase(0.U(REG.W), Seq(
         (br_op === BR_BL) -> 1.U(REG.W),
+        (src2_type === SRC2_CNTID) -> io.rj,
         (rf_we =/= 0.U(RF_SEL_LEN.W)) -> io.rd
     ))
     io.to_es.pc := ds.pc

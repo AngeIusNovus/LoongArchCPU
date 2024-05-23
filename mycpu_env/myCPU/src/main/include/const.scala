@@ -9,6 +9,7 @@ object const {
     val REG  = 5
     val CSR_ADDR = 14
     val BYTE_LEN = 4
+    val COUNT_N = 25
 
     val OP_LEN = 5
     val ALU_X = 31.U(OP_LEN.W)
@@ -53,13 +54,15 @@ object const {
     val CSR_XCHG    = 3.U(CSR_LEN.W)
     val CSR_ERTN    = 4.U(CSR_LEN.W)
     val CSR_SYSCALL = 5.U(CSR_LEN.W)
+    val CSR_BREAK   = 6.U(CSR_LEN.W)
+    val CSR_INE     = 7.U(CSR_LEN.W)
 
     val SRC1_LEN = 2
     val SRC1_X   = 0.U(SRC1_LEN.W)
     val SRC1_REG = 1.U(SRC1_LEN.W)
     val SRC1_PC  = 2.U(SRC1_LEN.W)
 
-    val SRC2_LEN = 3
+    val SRC2_LEN = 4
     val SRC2_X    = 0.U(SRC2_LEN.W)
     val SRC2_REG  = 1.U(SRC2_LEN.W)
     val SRC2_ui5  = 2.U(SRC2_LEN.W)
@@ -68,6 +71,9 @@ object const {
     val SRC2_si20 = 5.U(SRC2_LEN.W)
     val SRC2_si26 = 6.U(SRC2_LEN.W)
     val SRC2_ui12 = 7.U(SRC2_LEN.W)
+    val SRC2_CNTL = 8.U(SRC2_LEN.W)
+    val SRC2_CNTH = 9.U(SRC2_LEN.W)
+    val SRC2_CNTID = 10.U(SRC2_LEN.W)
 
     val MEM_WX = 0.U(BYTE_LEN.W)
     val MEM_WS = 15.U(BYTE_LEN.W)
@@ -106,22 +112,40 @@ object const {
 
     val CSR_WIDTH = 4
     val CSR_BADADDR = 15.U(CSR_WIDTH.W)
-    val CRMD = 0.U(CSR_WIDTH.W)
     val CRMD_X = "h0".U
-    val PRMD = 1.U(CSR_WIDTH.W)
     val PRMD_X = "h1".U
-    val ESTAT = 2.U(CSR_WIDTH.W)
+    val EUEN_X = "h2".U
+    val ECFG_X = "h4".U
     val ESTAT_X = "h5".U
-    val ERA = 3.U(CSR_WIDTH.W)
     val ERA_X = "h6".U
-    val EENTRY = 4.U(CSR_WIDTH.W)
+    val BADV_X = "h7".U
     val EENTRY_X = "hc".U
-    val SAVE0 = 5.U(CSR_WIDTH.W)
     val SAVE0_X = "h30".U
-    val SAVE1 = 6.U(CSR_WIDTH.W)
     val SAVE1_X = "h31".U
-    val SAVE2 = 7.U(CSR_WIDTH.W)
     val SAVE2_X = "h32".U
-    val SAVE3 = 8.U(CSR_WIDTH.W)
     val SAVE3_X = "h33".U
+    val TID_X = "h40".U
+    val TCFG_X = "h41".U 
+    val TVAL_X = "h42".U 
+    val TICLR_X = "h44".U
+}
+
+object Ecode {
+    val INT     = 0x00.U(6.W) 
+    val PIL     = 0x01.U(6.W)
+    val PIS     = 0x02.U(6.W)
+    val PIF     = 0x03.U(6.W)
+    val PME     = 0x04.U(6.W)
+    val PPI     = 0x07.U(6.W)
+    val ADEF    = 0x08.U(6.W)
+    val ADEM    = 0x08.U(6.W)
+    val ALE     = 0x09.U(6.W)
+    val SYS     = 0x0b.U(6.W)
+    val BRK     = 0x0c.U(6.W)
+    val INE     = 0x0d.U(6.W)
+    val IPE     = 0x0e.U(6.W)
+    val FPD     = 0x0f.U(6.W)
+    val FPE     = 0x12.U(6.W)
+    val TLBR    = 0x3F.U(6.W)
+    val NONE    = 0x1f.U(6.W)
 }

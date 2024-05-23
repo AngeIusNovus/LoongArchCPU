@@ -38,6 +38,10 @@ class MYCPU_TOP extends Module {
     IDU.io.rd_ms <> MEM.io.rd_ms
     IDU.io.rd_ws <> WBU.io.rd_ws
     IDU.io.es_flush <> EXE.io.es_flush
+    IDU.io.en_INT <> csrfile.io.en_INT
+    IDU.io.EcounterL  <> csrfile.io.EcounterL
+    IDU.io.EcounterH  <> csrfile.io.EcounterH
+    IDU.io.EcounterID <> csrfile.io.EcounterID
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
     EXE.io.to_ms      <> MEM.io.to_ms

@@ -24,6 +24,8 @@ class CSR_IO extends Bundle {
     val Excp        = Output(UInt(EXCP_LEN.W)) // 1:excp, 2:etrn
     val Ecode       = Output(UInt(ECODE_LEN.W))
     val Esubcode    = Output(UInt(ESUBCODE_LEN.W))
+    val badv        = Output(Bool())
+    val badvaddr    = Output(UInt(WORD.W))
     val pc          = Output(UInt(WORD.W))
     val en_mask     = Output(Bool())
     val we          = Output(Bool())
@@ -38,6 +40,8 @@ class CSR_OUT extends Bundle {
     val Excp        = Output(UInt(EXCP_LEN.W))
     val Ecode       = Output(UInt(ECODE_LEN.W))
     val Esubcode    = Output(UInt(ESUBCODE_LEN.W))
+    val badv        = Output(Bool())
+    val badvaddr     = Output(UInt(WORD.W))
     val pc          = Output(UInt(WORD.W))
     val en_mask     = Output(Bool())
     val we          = Output(Bool())
@@ -63,6 +67,7 @@ class DS_BUS extends Bundle {
     val valid = Output(Bool())
     val pc    = Output(UInt(WORD.W))
     val inst  = Output(UInt(WORD.W))
+    val ADEF  = Output(Bool())
 }
 
 class EX_BUS extends Bundle {
