@@ -7,7 +7,7 @@ import common.const._
 
 class IF_Stage extends Module {
     val io = IO(new Bundle {
-        val inst = new RAM_IO()
+        val inst = new CPU_AXI_RD_IO()
         val br = Flipped(new BR_OUT())
         val to_ds = new DS_BUS()
         val ds_allowin = Input(Bool())
@@ -21,8 +21,8 @@ class IF_Stage extends Module {
     val fs_valid = RegInit(false.B)
     val fs_allowin = Wire(Bool())
 
-    to_fs_valid := RegNext(!reset.asBool) & (!reset.asBool)
-    fs_ready_go := true.B
+    to_fs_valid := RegNext(!reset.asBool) && (!reset.asBool)
+    fs_ready_go := RegEnable(io.inst.r.valid, io.inst.r.valid)
     fs_allowin  := (!fs_valid) || (fs_ready_go && io.ds_allowin) && !io.ds_flush
     when (fs_allowin) {
         fs_valid := to_fs_valid
@@ -42,13 +42,20 @@ class IF_Stage extends Module {
         io.br.taken -> io.br.target
     ))
 
-    io.inst.we    := 0.U(BYTE_LEN.W)
-    io.inst.en    := to_fs_valid && fs_allowin && (nxt_pc(1, 0) === 0.U(2.W))
-    io.inst.addr  := nxt_pc
-    io.inst.wdata := 0.U(WORD.W)
+    io.inst.ar.id       := 0.U(4.W)
+    io.inst.ar.addr     := nxt_pc
+    io.inst.ar.len      := 0.U(8.W)
+    io.inst.ar.size     := 4.U(3.W)
+    io.inst.ar.burst    := 1.U(2.W)
+    io.inst.ar.lock     := 0.U(2.W)
+    io.inst.ar.cache    := 0.U(4.W)
+    io.inst.ar.prot     := 0.U(3.W)
+    io.inst.arvalid     := true.B
+
+    val now_inst = RegEnable(io.inst.r.data, io.inst.r.valid)
 
     io.to_ds.pc    := pc
-    io.to_ds.inst  := Mux(io.to_ds.valid, io.inst.rdata, 0.U(32.W))
+    io.to_ds.inst  := Mux(io.to_ds.valid, now_inst, 0.U(32.W))
     io.to_ds.valid := fs_valid && fs_ready_go && !io.br.taken && !csr_taken && !io.ds_flush
     io.to_ds.ADEF  := ADEF
 

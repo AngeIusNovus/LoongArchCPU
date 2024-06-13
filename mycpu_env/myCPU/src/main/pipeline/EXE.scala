@@ -11,10 +11,10 @@ class EXE_Stage extends Module {
         val to_ms = new ME_BUS()
         val es_allowin = Output(Bool())
         val ms_allowin = Input(Bool())
-        val data = new RAM_IO()
         val rd_es = new TMP_REG()
         val csr = new CSR_IO()
         val es_flush = Output(Bool())
+        val data = new AXI_WR_IO()
     })
 
     val es_valid = RegInit(false.B)
@@ -40,7 +40,6 @@ class EXE_Stage extends Module {
     
     io.to_ms.wb_src   := es.wb_src
     io.to_ms.rf_we    := es.rf_we
-    io.to_ms.dest     := es.dest
     io.to_ms.rd_value := es.rd_value
     io.to_ms.dest     := es.dest
     io.to_ms.alu_res  := alu_result
@@ -61,7 +60,7 @@ class EXE_Stage extends Module {
     io.csr.Ecode    := Mux(ALE && (csr.Ecode === Ecode.NONE), Ecode.ALE, csr.Ecode)
     io.csr.Esubcode := csr.Esubcode
     io.csr.badv     := csr.badv || ALE
-    io.csr.badvaddr  := Mux((io.csr.Ecode === Ecode.ALE), alu_result, csr.badvaddr)
+    io.csr.badvaddr := Mux((io.csr.Ecode === Ecode.ALE), alu_result, csr.badvaddr)
     io.csr.pc       := csr.pc
     io.csr.en_mask  := csr.en_mask
     io.csr.we       := csr.we
@@ -79,13 +78,26 @@ class EXE_Stage extends Module {
         (off === 3.U(2.W)) -> Cat(es.mem_we(0), es.mem_we(3, 1))
     ))
 
-    io.data.en := (es.mem_re =/= 0.U(BYTE_LEN.W)) && (!ALE)
-    io.data.we := Mux(!es_valid || (csr.Excp =/= 0.U(EXCP_LEN.W)), 0.U(BYTE_LEN.W), final_we)
-    io.data.addr := alu_result
-    io.data.wdata := MuxCase(es.rd_value, Seq(
+    io.data.aw.id := 1.U(AXI_ID.W)
+    io.data.aw.addr := alu_result
+    io.data.aw.len := 0.U(AXI_LEN.W)
+    io.data.aw.size := MuxCase(4.U(AXI_SIZE.W), Seq(
+        (es.mem_we === MEM_WB) -> 1.U(AXI_SIZE.W),
+        (es.mem_we === MEM_WH) -> 2.U(AXI_SIZE.W)
+    ))
+    io.data.aw.burst := 1.U(AXI_BURST.W)
+    io.data.aw.lock := 0.U(AXI_LOCK.W)
+    io.data.aw.cache := 0.U(AXI_CACHE.W)
+    io.data.aw.prot := 0.U(AXI_PROT.W)
+    io.data.awvalid := !(!es_valid || (csr.Excp =/= 0.U(EXCP_LEN.W))) && (es.mem_we =/= MEM_WX)
+    io.data.w.id := 1.U(AXI_ID.W)
+    io.data.w.data := MuxCase(es.rd_value, Seq(
         (es.mem_we === MEM_WB) -> Fill(4, es.rd_value(7, 0)),
         (es.mem_we === MEM_WH) -> Fill(2, es.rd_value(15, 0))
     ))
+    io.data.w.strb := final_we
+    io.data.w.last := true.B
+    io.data.wvalid := !(!es_valid || (csr.Excp =/= 0.U(EXCP_LEN.W))) && (es.mem_we =/= MEM_WX)
 
     io.rd_es.valid := (es.rf_we =/= 0.U(REG.W)) && es_valid && (es.dest =/= 0.U(REG.W))
     io.rd_es.ready := es.wb_src =/= WB_MEM

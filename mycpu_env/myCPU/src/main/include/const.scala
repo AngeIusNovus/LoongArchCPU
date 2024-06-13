@@ -128,6 +128,15 @@ object const {
     val TCFG_X = "h41".U 
     val TVAL_X = "h42".U 
     val TICLR_X = "h44".U
+
+    val AXI_ID = 4
+    val AXI_LEN = 8
+    val AXI_SIZE = 3
+    val AXI_BURST = 2
+    val AXI_LOCK = 2
+    val AXI_CACHE = 4
+    val AXI_PROT = 3
+    val AXI_STRB = 8
 }
 
 object Ecode {

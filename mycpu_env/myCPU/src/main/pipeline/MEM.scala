@@ -11,34 +11,47 @@ class MEM_Stage extends Module {
         val to_ws = new WB_BUS()
         val ms_allowin = Output(Bool())
         val ws_allowin = Input(Bool())
-        val data_rdata = Input(UInt(WORD.W))
+        val data = new CPU_AXI_RD_IO()
         val rd_ms = new TMP_REG()
     })
 
     val ms_valid = RegInit(false.B)
     val ms_ready_go = Wire(Bool())
 
-    ms_ready_go := true.B
+    val ms = RegEnable(io.to_ms, io.ms_allowin && io.to_ms.valid)
+    
+    ms_ready_go := (ms.wb_src =/= WB_MEM) || io.data.r.valid
     io.ms_allowin := (!ms_valid) | (io.ws_allowin & ms_ready_go)
     when (io.ms_allowin) {
         ms_valid := io.to_ms.valid
     }
     io.to_ws.valid := ms_valid & ms_ready_go
 
-    val ms = RegEnable(io.to_ms, io.ms_allowin && io.to_ms.valid)
+
+    io.data.ar.id       := 1.U(4.W)
+    io.data.ar.addr     := ms.alu_res
+    io.data.ar.len      := 0.U(8.W)
+    io.data.ar.size     := 4.U(3.W)
+    io.data.ar.burst    := 1.U(2.W)
+    io.data.ar.lock     := 0.U(2.W)
+    io.data.ar.cache    := 0.U(4.W)
+    io.data.ar.prot     := 0.U(3.W)
+    io.data.arvalid     := (ms.wb_src === WB_MEM)
+
+    val data_rdata = RegEnable(io.data.r.data, io.data.r.valid)
 
     val off = ms.addr(1, 0)
     val final_rdata = Wire(UInt(WORD.W))
     val tmp_rdata = Wire(UInt(WORD.W))
 
-    tmp_rdata := MuxCase(io.data_rdata, Seq(
-        (off === 0.U(2.W)) -> io.data_rdata(15, 0),
-        (off === 1.U(2.W)) -> io.data_rdata(23, 8),
-        (off === 2.U(2.W)) -> io.data_rdata(31, 16),
-        (off === 3.U(2.W)) -> io.data_rdata(31, 24)
+    tmp_rdata := MuxCase(data_rdata, Seq(
+        (off === 0.U(2.W)) -> data_rdata(15, 0),
+        (off === 1.U(2.W)) -> data_rdata(23, 8),
+        (off === 2.U(2.W)) -> data_rdata(31, 16),
+        (off === 3.U(2.W)) -> data_rdata(31, 24)
     ))
 
-    final_rdata := MuxCase(io.data_rdata, Seq(
+    final_rdata := MuxCase(data_rdata, Seq(
         (ms.mem_re === MEM_RB) -> Cat(Fill(24, tmp_rdata(7)), tmp_rdata(7, 0)),
         (ms.mem_re === MEM_RH) -> Cat(Fill(16, tmp_rdata(15)), tmp_rdata(15, 0)),
         (ms.mem_re === MEM_RBU) -> Cat(0.U(24.W), tmp_rdata(7, 0)),

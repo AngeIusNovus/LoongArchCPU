@@ -107,3 +107,69 @@ class WB_BUS extends Bundle {
     val wb_data = Output(UInt(WORD.W))
     val pc      = Output(UInt(WORD.W))
 }
+
+class AXI_AR_IO extends Bundle {
+    val id = Output(UInt(AXI_ID.W))
+    val addr = Output(UInt(WORD.W))
+    val len = Output(UInt(AXI_LEN.W))
+    val size = Output(UInt(AXI_SIZE.W))
+    val burst = Output(UInt(AXI_BURST.W))
+    val lock = Output(UInt(AXI_LOCK.W))
+    val cache = Output(UInt(AXI_CACHE.W))
+    val prot = Output(UInt(AXI_PROT.W))
+}
+
+class AXI_R_IO extends Bundle {
+    val id = Output(UInt(AXI_ID.W))
+    val data = Output(UInt(WORD.W))
+    val valid = Output(Bool())
+}
+
+class CPU_AXI_RD_IO extends Bundle {
+    val ar = new AXI_AR_IO()
+    val r  = Flipped(new AXI_R_IO())
+    val arvalid = Output(Bool())
+}
+
+class AXI_RD_IO extends CPU_AXI_RD_IO {
+    val arready = Input(Bool())
+    val rready = Output(Bool())
+}
+
+class AXI_AW_IO extends Bundle {
+    val id = Output(UInt(AXI_ID.W))
+    val addr = Output(UInt(WORD.W))
+    val len = Output(UInt(AXI_LEN.W))
+    val size = Output(UInt(AXI_SIZE.W))
+    val burst = Output(UInt(AXI_BURST.W))
+    val lock = Output(UInt(AXI_LOCK.W))
+    val cache = Output(UInt(AXI_CACHE.W))
+    val prot = Output(UInt(AXI_PROT.W)) 
+}
+
+class AXI_W_IO extends Bundle {
+    val id = Output(UInt(AXI_ID.W))
+    val data = Output(UInt(WORD.W))
+    val strb = Output(UInt(AXI_STRB.W))
+    val last = Output(Bool())
+}
+
+class AXI_B_IO extends Bundle {
+    val valid = Output(Bool())
+    val ready = Input(Bool())
+}
+
+class AXI_WR_IO extends Bundle {
+    val aw = new AXI_AW_IO()
+    val awvalid = Output(Bool())
+    val awready = Input(Bool())
+    val w = new AXI_W_IO()
+    val wvalid  = Output(Bool())
+    val wready  = Input(Bool())
+    val b = Flipped(new AXI_B_IO())
+}
+
+class AXI_IO extends Bundle {
+    val rd = new AXI_RD_IO()
+    val wr = new AXI_WR_IO()
+}

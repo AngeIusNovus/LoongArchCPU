@@ -5,8 +5,7 @@ import chisel3.util._
 import common._
 class MYCPU_TOP extends Module {
     val io = IO(new Bundle {
-        val inst = new RAM_IO()
-        val data = new RAM_IO()
+        val axi = new AXI_IO()
         val debug = new DEBUG()
     })
 
@@ -17,8 +16,13 @@ class MYCPU_TOP extends Module {
     val WBU = Module(new WB_Stage())
     val regfile = Module(new RegFile())
     val csrfile = Module(new CsrFile())
+    val axi_rd = Module(new AXI_RD())
+    val axi_wr = Module(new AXI_WR())
 
-    IFU.io.inst <> io.inst
+    io.axi.rd <> axi_rd.io.axi
+    io.axi.wr <> axi_wr.io.axi
+
+    IFU.io.inst <> axi_rd.inst
     IFU.io.to_ds <> IDU.io.to_ds
     IFU.io.br <> IDU.io.br
     IFU.io.ds_allowin <> IDU.io.ds_allowin
@@ -45,11 +49,11 @@ class MYCPU_TOP extends Module {
 
     EXE.io.ms_allowin <> MEM.io.ms_allowin
     EXE.io.to_ms      <> MEM.io.to_ms
-    EXE.io.data       <> io.data
+    EXE.io.data       <> axi_wr.io.req
     EXE.io.csr        <> csrfile.io.csr
 
     MEM.io.ws_allowin <> WBU.io.ws_allowin
-    MEM.io.data_rdata <> io.data.rdata
+    MEM.io.data       <> axi_rd.data
     MEM.io.to_ws      <> WBU.io.to_ws
 
     WBU.io.debug      <> io.debug
